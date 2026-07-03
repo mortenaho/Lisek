@@ -52,30 +52,36 @@ export function getProtoServices(protoId: string): GrpcServiceInfo[] {
   return extractServices(loadedPackages.get(protoId)!)
 }
 
+function isServiceClient(value: unknown): value is grpc.ServiceClientConstructor {
+  return (
+    typeof value === 'function' &&
+    'service' in value &&
+    typeof (value as grpc.ServiceClientConstructor).service === 'object'
+  )
+}
+
 function extractServices(pkg: grpc.GrpcObject): GrpcServiceInfo[] {
   const services: GrpcServiceInfo[] = []
 
   function walk(obj: grpc.GrpcObject, prefix = '') {
     for (const [key, value] of Object.entries(obj)) {
-      if (value && typeof value === 'object') {
-        const maybeCtor = value as unknown as grpc.ServiceClientConstructor
-        if ('service' in value || typeof maybeCtor.service === 'object') {
-          const ctor = maybeCtor
-          const methods: GrpcServiceInfo['methods'] = []
-          if (ctor.service) {
-            for (const [methodName, methodDef] of Object.entries(ctor.service)) {
-              const def = methodDef as { requestStream?: boolean; responseStream?: boolean }
-              let callType: GrpcCallType = 'unary'
-              if (def.requestStream && def.responseStream) callType = 'bidi_streaming'
-              else if (def.requestStream) callType = 'client_streaming'
-              else if (def.responseStream) callType = 'server_streaming'
-              methods.push({ name: methodName, callType })
-            }
-          }
-          services.push({ name: prefix ? `${prefix}.${key}` : key, methods })
-        } else {
-          walk(value as grpc.GrpcObject, prefix ? `${prefix}.${key}` : key)
+      if (isServiceClient(value)) {
+        const ctor = value
+        const methods: GrpcServiceInfo['methods'] = []
+        for (const [methodName, methodDef] of Object.entries(ctor.service)) {
+          const def = methodDef as { requestStream?: boolean; responseStream?: boolean }
+          let callType: GrpcCallType = 'unary'
+          if (def.requestStream && def.responseStream) callType = 'bidi_streaming'
+          else if (def.requestStream) callType = 'client_streaming'
+          else if (def.responseStream) callType = 'server_streaming'
+          methods.push({ name: methodName, callType })
         }
+        services.push({ name: prefix ? `${prefix}.${key}` : key, methods })
+        continue
+      }
+
+      if (value && typeof value === 'object' && !Array.isArray(value)) {
+        walk(value as grpc.GrpcObject, prefix ? `${prefix}.${key}` : key)
       }
     }
   }
