@@ -166,22 +166,14 @@ const JsonQueryPanel = memo(function JsonQueryPanel({
   data: unknown
   responseKey: string
 }) {
-  const environments = useAppStore((s) => s.environments)
-  const loadEnvironments = useAppStore((s) => s.loadEnvironments)
   const [jsonQuery, setJsonQuery] = useState('')
-  const [envVarName, setEnvVarName] = useState('')
   const [queryResult, setQueryResult] = useState<string | null>(null)
   const [queryError, setQueryError] = useState<string | null>(null)
-  const [extractMsg, setExtractMsg] = useState<string | null>(null)
-
-  const activeEnv = environments.find((e) => e.isActive)
 
   useEffect(() => {
     setJsonQuery('')
-    setEnvVarName('')
     setQueryResult(null)
     setQueryError(null)
-    setExtractMsg(null)
   }, [responseKey])
 
   const runQuery = useCallback(() => {
@@ -195,30 +187,6 @@ const JsonQueryPanel = memo(function JsonQueryPanel({
     setQueryError(null)
     setQueryResult(formatQueryResult(outcome.result))
   }, [data, jsonQuery])
-
-  const saveToEnvironment = useCallback(async () => {
-    if (!jsonQuery.trim() || !envVarName.trim() || !activeEnv) return
-    const outcome = runJsonPathQuery(data, jsonQuery)
-    if (!outcome.ok) {
-      setExtractMsg(outcome.error)
-      return
-    }
-    const value = formatQueryResult(outcome.result)
-    const vars = [...activeEnv.variables]
-    const existing = vars.findIndex((v) => v.key === envVarName.trim())
-    const entry = {
-      id: existing >= 0 ? vars[existing].id : String(Date.now()),
-      key: envVarName.trim(),
-      value,
-      enabled: true
-    }
-    if (existing >= 0) vars[existing] = entry
-    else vars.push(entry)
-    await window.fluxAPI.environments.save({ ...activeEnv, variables: vars })
-    await loadEnvironments()
-    setExtractMsg(`Saved to ${activeEnv.name}`)
-    window.setTimeout(() => setExtractMsg(null), 2000)
-  }, [activeEnv, data, envVarName, jsonQuery, loadEnvironments])
 
   return (
     <Box sx={{ p: 1, flexShrink: 0, bgcolor: 'action.hover' }}>
@@ -244,34 +212,6 @@ const JsonQueryPanel = memo(function JsonQueryPanel({
           Query
         </Button>
       </Box>
-      <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
-        <TextField
-          size="small"
-          placeholder="Environment variable name"
-          value={envVarName}
-          onChange={(e) => setEnvVarName(e.target.value)}
-          disabled={!activeEnv}
-          sx={{ flex: 1, bgcolor: 'background.paper' }}
-        />
-        <Button
-          size="small"
-          variant="outlined"
-          onClick={() => void saveToEnvironment()}
-          disabled={!activeEnv || !jsonQuery.trim() || !envVarName.trim()}
-        >
-          Save to Env
-        </Button>
-      </Box>
-      {!activeEnv && (
-        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
-          Select an active environment to extract values
-        </Typography>
-      )}
-      {extractMsg && (
-        <Alert severity="success" sx={{ py: 0, mb: 1 }}>
-          {extractMsg}
-        </Alert>
-      )}
       {queryError && (
         <Alert severity="error" sx={{ py: 0 }}>
           {queryError}

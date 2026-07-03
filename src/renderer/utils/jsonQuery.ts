@@ -133,6 +133,19 @@ export function formatQueryResult(result: unknown): string {
   return JSON.stringify(result, null, 2)
 }
 
+export function formatEnvValue(result: unknown): string {
+  if (result === null || result === undefined) return ''
+  if (typeof result === 'string') return result
+  if (typeof result === 'number' || typeof result === 'boolean') return String(result)
+  if (Array.isArray(result)) {
+    if (result.length === 0) return ''
+    if (result.length === 1) return formatEnvValue(result[0])
+    return JSON.stringify(result)
+  }
+  if (typeof result === 'object') return JSON.stringify(result)
+  return String(result)
+}
+
 export type ResponseBodyView = {
   language: string
   label: string

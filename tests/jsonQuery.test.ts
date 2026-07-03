@@ -5,7 +5,8 @@ import {
   evaluateDotPath,
   runJsonPathQuery,
   formatQueryResult,
-  detectResponseBody
+  detectResponseBody,
+  formatEnvValue
 } from '../src/renderer/utils/jsonQuery'
 
 const sampleData = {
@@ -75,5 +76,11 @@ describe('JSON query utilities', () => {
     expect(detectResponseBody('{"ok":true}').label).toBe('JSON')
     expect(detectResponseBody('<html><body>Hi</body></html>', 'text/html').language).toBe('html')
     expect(detectResponseBody('plain text').label).toBe('Text')
+  })
+
+  it('formatEnvValue — stores plain strings without JSON quotes', () => {
+    expect(formatEnvValue('ok')).toBe('ok')
+    expect(formatEnvValue(42)).toBe('42')
+    expect(formatEnvValue({ x: 1 })).toBe('{"x":1}')
   })
 })

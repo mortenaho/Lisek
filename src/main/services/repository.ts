@@ -341,12 +341,20 @@ export function listEnvironments(): EnvironmentModel[] {
 export function saveEnvironment(data: Partial<EnvironmentModel> & { id?: string }): EnvironmentModel {
   const id = data.id || uuidv4()
   const existing = data.id
-    ? getOne<{ created_at: number }>('SELECT created_at FROM environments WHERE id = ?', [id])
+    ? getOne<{ created_at: number; is_active: number }>(
+        'SELECT created_at, is_active FROM environments WHERE id = ?',
+        [id]
+      )
     : undefined
   const now = Date.now()
-  const name = data.name || 'New Environment'
-  const isActive = data.isActive ? 1 : 0
-  const variablesJson = JSON.stringify(data.variables || [])
+  const name = data.name ?? (existing ? listEnvironments().find((e) => e.id === id)?.name : undefined) ?? 'New Environment'
+  const isActive =
+    data.isActive !== undefined ? (data.isActive ? 1 : 0) : (existing?.is_active ?? 0)
+  const variables =
+    data.variables ??
+    (existing ? listEnvironments().find((e) => e.id === id)?.variables : undefined) ??
+    []
+  const variablesJson = JSON.stringify(variables)
   const createdAt = existing?.created_at ?? now
 
   if (existing) {
@@ -357,7 +365,7 @@ export function saveEnvironment(data: Partial<EnvironmentModel> & { id?: string 
     ])
   }
 
-  return { id, name, isActive: !!isActive, variables: data.variables || [], createdAt }
+  return { id, name, isActive: !!isActive, variables, createdAt }
 }
 
 export function deleteEnvironment(id: string) {
