@@ -1,8 +1,9 @@
 import { describe, it, expect, beforeAll } from 'vitest'
-import { readFileSync, writeFileSync, mkdirSync } from 'fs'
+import { writeFileSync, mkdirSync, mkdtempSync } from 'fs'
 import { join } from 'path'
+import { tmpdir } from 'os'
+import { initDatabase } from '../src/main/db/index'
 import { getProtoServices, importProtoFile, deleteProtoFile } from '../src/main/services/grpc.service'
-import { initDatabase } from '../src/main/db'
 
 const fixtureDir = join(process.cwd(), 'tests', 'fixtures')
 const protoPath = join(fixtureDir, 'user.proto')
@@ -51,10 +52,11 @@ message DeleteUserResponse {
 }
 `
 
-beforeAll(() => {
+beforeAll(async () => {
   mkdirSync(fixtureDir, { recursive: true })
   writeFileSync(protoPath, USER_PROTO, 'utf-8')
-  initDatabase()
+  const tempDir = mkdtempSync(join(tmpdir(), 'fluxapi-grpc-test-'))
+  await initDatabase(join(tempDir, 'fluxapi.db'))
 })
 
 describe('gRPC proto import', () => {
