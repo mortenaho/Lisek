@@ -1,0 +1,111 @@
+{
+  "name": "fluxapi",
+  "version": "1.0.0",
+  "description": "Offline API client for HTTP, GraphQL, WebSocket, and gRPC",
+  "main": "./out/main/index.js",
+  "author": "Seyed Morteza Hosseini <mortenaho@gmail.com> (https://mortenaho.ir)",
+  "license": "MIT",
+  "scripts": {
+    "dev": "node scripts/brand-electron.mjs && electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "node scripts/brand-electron.mjs && electron-vite preview",
+    "dist": "npm run build && node scripts/prep-dist.mjs && electron-builder --win --config.directories.output=%TEMP%\\fluxapi-dist && node scripts/post-dist.mjs",
+    "icons": "node scripts/build-icons.mjs && node scripts/brand-electron.mjs",
+    "postinstall": "node scripts/brand-electron.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@apidevtools/swagger-parser": "^10.1.1",
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@fontsource/roboto": "^5.2.5",
+    "@grpc/grpc-js": "^1.13.0",
+    "@grpc/proto-loader": "^0.7.15",
+    "@monaco-editor/react": "^4.7.0",
+    "@mui/icons-material": "^6.4.7",
+    "@mui/material": "^6.4.7",
+    "graphql": "^16.10.0",
+    "jsonpath-plus": "^10.4.0",
+    "monaco-editor": "^0.52.2",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-syntax-highlighter": "^15.6.1",
+    "sql.js": "^1.14.1",
+    "undici": "^6.27.0",
+    "uuid": "^11.1.0",
+    "ws": "^8.18.1",
+    "yaml": "^2.7.0",
+    "zustand": "^5.0.3"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@types/react-syntax-highlighter": "^15.5.13",
+    "@types/uuid": "^10.0.0",
+    "@types/ws": "^8.18.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "electron": "^34.3.0",
+    "electron-builder": "^25.1.8",
+    "electron-vite": "^3.0.0",
+    "png-to-ico": "^3.0.1",
+    "rcedit": "^5.0.2",
+    "typescript": "^5.8.2",
+    "vite": "^6.2.1",
+    "vitest": "^4.1.9"
+  },
+  "build": {
+    "appId": "com.fluxapi.app",
+    "productName": "FluxAPI",
+    "directories": {
+      "output": "dist-installer"
+    },
+    "files": [
+      "out/**/*",
+      "node_modules/**/*",
+      "resources/**/*",
+      "package.json"
+    ],
+    "asar": true,
+    "extraResources": [
+      {
+        "from": "resources/icon.ico",
+        "to": "icon.ico"
+      },
+      {
+        "from": "resources/fluxapi-logo.png",
+        "to": "fluxapi-logo.png"
+      },
+      {
+        "from": "resources/fluxapi-logo.svg",
+        "to": "fluxapi-logo.svg"
+      }
+    ],
+    "asarUnpack": [
+      "**/node_modules/sql.js/**"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "resources/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "allowElevation": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "FluxAPI",
+      "installerLanguages": [
+        "en_US"
+      ]
+    }
+  }
+}
