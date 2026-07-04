@@ -27,6 +27,13 @@ jobs:
       - name: Build Windows installer
         run: npm run dist
 
+      - name: Prepare stable download filename
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem dist-installer/*.exe | Select-Object -First 1
+          if (-not $installer) { throw 'Installer not found in dist-installer/' }
+          Copy-Item $installer.FullName dist-installer/FluxAPI-Setup.exe
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:

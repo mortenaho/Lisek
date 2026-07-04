@@ -4,6 +4,8 @@ Offline desktop API client for **HTTP**, **GraphQL**, **WebSocket**, and **gRPC*
 
 **Website:** [mortenaho.github.io/fluxapi](https://mortenaho.github.io/fluxapi) (GitHub Pages)
 
+**Download (Windows):** [FluxAPI-Setup.exe](https://github.com/mortenaho/fluxapi/releases/latest/download/FluxAPI-Setup.exe)
+
 ## Screenshots
 
 ### GET — list products

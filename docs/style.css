@@ -288,6 +288,16 @@ section {
   color: var(--text-muted);
 }
 
+.download-url {
+  margin: 1.25rem 0 0 !important;
+  font-size: 0.85rem;
+  word-break: break-all;
+}
+
+.download-url a {
+  color: var(--cyan);
+}
+
 .site-footer {
   border-top: 1px solid var(--border);
   padding: 2rem 0 3rem;
