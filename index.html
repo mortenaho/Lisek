@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FluxAPI — Offline API Client for HTTP, GraphQL, WebSocket &amp; gRPC</title>
+  <meta name="description" content="FluxAPI is a free, offline desktop API client for HTTP, GraphQL, WebSocket, and gRPC. No cloud account required. Built with Electron and React.">
+  <meta name="theme-color" content="#0b0f17">
+  <meta property="og:title" content="FluxAPI — Offline API Client">
+  <meta property="og:description" content="Test HTTP, GraphQL, WebSocket, and gRPC APIs locally. Collections, environments, scripts, and more.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="screenshots/get-request.png">
+  <link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <!-- Direct download: https://github.com/mortenaho/fluxapi/releases/latest/download/FluxAPI-Setup.exe -->
+</head>
+<body>
+  <header class="site-header">
+    <div class="container nav">
+      <a class="brand" href="#top">
+        <img src="assets/logo.svg" alt="" width="36" height="36">
+        FluxAPI
+      </a>
+      <ul class="nav-links">
+        <li><a href="#features">Features</a></li>
+        <li><a href="#screenshots">Screenshots</a></li>
+        <li><a href="#download">Download</a></li>
+        <li><a href="https://github.com/mortenaho/fluxapi">GitHub</a></li>
+      </ul>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div class="container">
+        <img class="hero-logo" src="assets/logo.svg" alt="FluxAPI logo">
+        <h1>Test APIs <span>offline</span>, without the cloud</h1>
+        <p>
+          FluxAPI is a desktop API client for HTTP, GraphQL, WebSocket, and gRPC.
+          Organize collections, manage environments, run scripts, and keep everything on your machine.
+        </p>
+        <div class="badges">
+          <span class="badge">Windows</span>
+          <span class="badge">Offline-first</span>
+          <span class="badge">MIT License</span>
+          <span class="badge">v1.1.0</span>
+        </div>
+        <div class="actions">
+          <a class="btn btn-primary" href="https://github.com/mortenaho/fluxapi/releases/latest/download/FluxAPI-Setup.exe">Download for Windows</a>
+          <a class="btn btn-secondary" href="https://github.com/mortenaho/fluxapi">View on GitHub</a>
+        </div>
+      </div>
+    </section>
+
+    <section id="features">
+      <div class="container">
+        <h2 class="section-title">Everything you need to explore APIs</h2>
+        <p class="section-lead">A focused alternative to cloud-based clients — fast, private, and fully local.</p>
+        <div class="feature-grid">
+          <article class="feature-card">
+            <h3>HTTP &amp; REST</h3>
+            <p>All methods, params, headers, form-data, file uploads, auth, cookies, and cURL import/export.</p>
+          </article>
+          <article class="feature-card">
+            <h3>GraphQL</h3>
+            <p>Query editor, variables, and schema introspection with one-click field insertion.</p>
+          </article>
+          <article class="feature-card">
+            <h3>WebSocket</h3>
+            <p>Connect to ws/wss endpoints, send messages, and inspect a live traffic log.</p>
+          </article>
+          <article class="feature-card">
+            <h3>gRPC</h3>
+            <p>Import .proto files, pick services and methods, and call unary or streaming RPCs.</p>
+          </article>
+          <article class="feature-card">
+            <h3>Collections &amp; Runner</h3>
+            <p>Nested folders, pinning, Postman/OpenAPI export, and sequential collection runs.</p>
+          </article>
+          <article class="feature-card">
+            <h3>Scripts &amp; Variables</h3>
+            <p>Postman-compatible pm.* scripts, environments, collection variables, and JSONPath queries.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="screenshots">
+      <div class="container">
+        <h2 class="section-title">Screenshots</h2>
+        <p class="section-lead">Clean UI for building requests, inspecting responses, and managing environments.</p>
+        <div class="screenshot-grid">
+          <figure class="shot">
+            <img src="screenshots/get-request.png" alt="GET request with JSON response" loading="lazy">
+            <figcaption>GET request with JSON response</figcaption>
+          </figure>
+          <figure class="shot">
+            <img src="screenshots/post-request.png" alt="POST request with JSON body" loading="lazy">
+            <figcaption>POST with JSON body and 201 Created</figcaption>
+          </figure>
+          <figure class="shot">
+            <img src="screenshots/delete-request.png" alt="DELETE request" loading="lazy">
+            <figcaption>DELETE with status and timing</figcaption>
+          </figure>
+          <figure class="shot">
+            <img src="screenshots/environments.png" alt="Environments dialog" loading="lazy">
+            <figcaption>Environment variables with {{substitution}}</figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <section id="download">
+      <div class="container">
+        <h2 class="section-title">Download</h2>
+        <div class="download-box">
+          <p>
+            FluxAPI runs on Windows 10/11 (x64). Click below to download the installer directly (~88 MB).
+          </p>
+          <div class="actions">
+            <a class="btn btn-primary" href="https://github.com/mortenaho/fluxapi/releases/latest/download/FluxAPI-Setup.exe">FluxAPI-Setup.exe</a>
+            <a class="btn btn-secondary" href="https://github.com/mortenaho/fluxapi/releases/latest">All releases</a>
+            <a class="btn btn-secondary" href="https://github.com/mortenaho/fluxapi#build-windows-installer">Build from source</a>
+          </div>
+          <p class="download-url">
+            Direct link:
+            <a href="https://github.com/mortenaho/fluxapi/releases/latest/download/FluxAPI-Setup.exe">github.com/mortenaho/fluxapi/releases/latest/download/FluxAPI-Setup.exe</a>
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="container">
+        <h2 class="section-title">Tech stack</h2>
+        <div class="stack-list">
+          <span>Electron</span>
+          <span>React</span>
+          <span>MUI</span>
+          <span>Monaco Editor</span>
+          <span>SQLite (sql.js)</span>
+          <span>undici</span>
+          <span>@grpc/grpc-js</span>
+          <span>TypeScript</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-row">
+      <span>MIT License · FluxAPI</span>
+      <span>
+        Built by
+        <a href="https://mortenaho.ir">Seyed Morteza Hosseini</a>
+        ·
+        <a href="https://github.com/mortenaho/fluxapi">GitHub</a>
+      </span>
+    </div>
+  </footer>
+</body>
+</html>

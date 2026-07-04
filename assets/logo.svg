@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none" role="img" aria-label="FluxAPI">
+  <defs>
+    <linearGradient id="flux-grad" x1="64" y1="256" x2="448" y2="256" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#22D3EE"/>
+      <stop offset="50%" stop-color="#3B82F6"/>
+      <stop offset="100%" stop-color="#6366F1"/>
+    </linearGradient>
+  </defs>
+  <path
+    d="M196 88 C132 88 108 132 108 176 C108 208 76 228 64 256 C76 284 108 304 108 336 C108 380 132 424 196 424"
+    stroke="url(#flux-grad)"
+    stroke-width="36"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <path
+    d="M316 88 C380 88 404 132 404 176 C404 208 436 228 448 256 C436 284 404 304 404 336 C404 380 380 424 316 424"
+    stroke="url(#flux-grad)"
+    stroke-width="36"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <path
+    d="M214 176 L274 256 L214 336"
+    stroke="#22D3EE"
+    stroke-width="34"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <path
+    d="M284 176 L344 256 L284 336"
+    stroke="#6366F1"
+    stroke-width="34"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <circle cx="108" cy="256" r="14" fill="#22D3EE"/>
+  <circle cx="404" cy="256" r="14" fill="#6366F1"/>
+</svg>
