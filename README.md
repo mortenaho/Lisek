@@ -8,21 +8,29 @@ Offline desktop API client for **HTTP**, **GraphQL**, **WebSocket**, and **gRPC*
 
 ## Screenshots
 
-### GET — list products
+### GET — JSONPlaceholder posts
 
 ![GET request with JSON response](docs/screenshots/get-request.png)
 
-### POST — create a product
+### DELETE — with query parameters
 
-![POST request with JSON body and 201 Created response](docs/screenshots/post-request.png)
+![DELETE request with query parameters](docs/screenshots/delete-request.png)
 
-### DELETE — remove a product
+### DELETE — empty JSON response
 
-![DELETE request with 200 OK response](docs/screenshots/delete-request.png)
+![DELETE request with 200 OK response](docs/screenshots/delete-response.png)
 
 ### Environments — manage variables
 
 ![Environments dialog with active environment and {{variable}} substitution](docs/screenshots/environments.png)
+
+### History — recent requests
+
+![Request history with status codes and timing](docs/screenshots/history.png)
+
+### Collections — sidebar and variables
+
+![Collections sidebar and variable URL input](docs/screenshots/collections.png)
 
 ---
 

@@ -25,7 +25,6 @@ import {
 } from '../utils/variables'
 
 const EMPTY_VARS: KeyValue[] = []
-const VARIABLE_CHIP_PAD_X = 2
 
 interface Props {
   value: string
@@ -39,18 +38,24 @@ interface Props {
 
 const INPUT_PADDING = '4px 8px'
 
+/** Shared metrics — input caret and highlight layer must match exactly. */
+const INPUT_TEXT_STYLE = {
+  fontSize: '0.75rem',
+  fontFamily: 'Consolas, "Cascadia Code", "Courier New", monospace',
+  lineHeight: '1.4375em',
+  letterSpacing: 'normal',
+  fontWeight: 400
+} as const
+
 let measureCanvas: HTMLCanvasElement | null = null
 
-function measureTextRun(text: string, style: CSSStyleDeclaration, fontWeight: number | string): number {
+function measureTextRun(text: string, style: CSSStyleDeclaration): number {
   if (!text) return 0
   if (!measureCanvas) measureCanvas = document.createElement('canvas')
   const ctx = measureCanvas.getContext('2d')
   if (!ctx) return 0
-  ctx.font = `${fontWeight} ${style.fontSize} ${style.fontFamily}`
-  const width = ctx.measureText(text).width
-  const fontSize = parseFloat(style.fontSize)
-  const letterSpacing = fontSize * 0.00938 * Math.max(0, text.length - 1)
-  return width + letterSpacing
+  ctx.font = `${INPUT_TEXT_STYLE.fontWeight} ${style.fontSize} ${INPUT_TEXT_STYLE.fontFamily}`
+  return ctx.measureText(text).width
 }
 
 function findVariableAtOffsetX(
@@ -60,14 +65,11 @@ function findVariableAtOffsetX(
 ): { segment: VariableSegment; centerX: number } | null {
   let x = 0
   for (const seg of segments) {
-    const weight = seg.type === 'variable' ? 600 : 400
-    const runWidth = measureTextRun(seg.content, style, weight)
-    const extra = seg.type === 'variable' ? VARIABLE_CHIP_PAD_X : 0
-    const total = runWidth + extra
-    if (offsetX >= x && offsetX <= x + total) {
-      return seg.type === 'variable' ? { segment: seg, centerX: x + total / 2 } : null
+    const runWidth = measureTextRun(seg.content, style)
+    if (offsetX >= x && offsetX <= x + runWidth) {
+      return seg.type === 'variable' ? { segment: seg, centerX: x + runWidth / 2 } : null
     }
-    x += total
+    x += runWidth
   }
   return null
 }
@@ -292,10 +294,7 @@ function VariableInput({
             inset: 0,
             px: '8px',
             py: '4px',
-            fontSize: '0.75rem',
-            fontFamily: theme.typography.fontFamily,
-            lineHeight: '1.4375em',
-            letterSpacing: '0.00938em',
+            ...INPUT_TEXT_STYLE,
             whiteSpace: 'pre',
             overflow: 'hidden',
             pointerEvents: 'none',
@@ -310,10 +309,10 @@ function VariableInput({
                   component="span"
                   sx={{
                     color: variableColor(seg.source, theme),
-                    fontWeight: 600,
-                    bgcolor: `${variableColor(seg.source, theme)}18`,
-                    borderRadius: '3px',
-                    px: '1px'
+                    bgcolor: `${variableColor(seg.source, theme)}22`,
+                    borderRadius: '2px',
+                    boxDecorationBreak: 'clone',
+                    WebkitBoxDecorationBreak: 'clone'
                   }}
                 >
                   {seg.content}
@@ -363,11 +362,11 @@ function VariableInput({
           }}
           sx={{
             width: '100%',
-            fontSize: '0.75rem',
             position: 'relative',
             zIndex: 1,
             '& .MuiInputBase-input': {
               padding: INPUT_PADDING,
+              ...INPUT_TEXT_STYLE,
               color: 'transparent',
               backgroundColor: 'transparent',
               caretColor: theme.palette.text.primary
