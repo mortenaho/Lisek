@@ -111,19 +111,16 @@ a:hover {
 .hero::before {
   content: "";
   position: absolute;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: min(120%, 980px);
-  height: clamp(520px, 62vh, 700px);
-  background:
-    radial-gradient(
-      ellipse 95% 88% at 50% -6%,
-      rgba(34, 211, 238, 0.22) 0%,
-      rgba(59, 130, 246, 0.1) 32%,
-      rgba(99, 102, 241, 0.04) 52%,
-      transparent 72%
-    );
+  top: -8%;
+  left: 0;
+  right: 0;
+  height: clamp(480px, 52vh, 600px);
+  background: radial-gradient(
+    ellipse 160% 85% at 50% -10%,
+    rgba(34, 211, 238, 0.14) 0%,
+    rgba(59, 130, 246, 0.05) 42%,
+    transparent 68%
+  );
   pointer-events: none;
 }
 
@@ -183,15 +180,6 @@ a:hover {
   position: relative;
   width: min(100%, 960px);
   margin: 0 auto -2rem;
-}
-
-.hero-preview::before {
-  content: "";
-  position: absolute;
-  inset: 8% 10% 0;
-  background: radial-gradient(ellipse at 50% 20%, rgba(99, 102, 241, 0.14), transparent 72%);
-  pointer-events: none;
-  z-index: -1;
 }
 
 .hero-preview-frame {
