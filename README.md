@@ -2,6 +2,8 @@
 
 Offline desktop API client for **HTTP**, **GraphQL**, **WebSocket**, and **gRPC**. Built with Electron, React, MUI, and SQLite — no cloud account required.
 
+**Website:** [mortenaho.github.io/fluxapi](https://mortenaho.github.io/fluxapi) (GitHub Pages)
+
 ## Screenshots
 
 ### GET — list products
@@ -199,6 +201,31 @@ npm run dist
 Output: `dist-installer/FluxAPI Setup 1.1.0.exe`
 
 The build writes to a temp directory and copies the installer into `dist-installer/` via `scripts/post-dist.mjs`.
+
+---
+
+## GitHub Pages
+
+The project website lives in [`docs/`](docs/index.html) and is deployed automatically via GitHub Actions.
+
+1. Open **Settings → Pages**
+2. Set **Source** to **GitHub Actions**
+3. Push to `main` — the [Deploy GitHub Pages](.github/workflows/pages.yml) workflow publishes `docs/`
+
+Site URL: **https://mortenaho.github.io/fluxapi/**
+
+---
+
+## Releases
+
+Windows installers are built automatically when you push a version tag:
+
+```bash
+git tag v1.1.0
+git push origin v1.1.0
+```
+
+The [Release](.github/workflows/release.yml) workflow runs `npm run dist` on Windows and uploads `FluxAPI Setup *.exe` to GitHub Releases.
 
 ---
 
