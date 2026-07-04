@@ -1,6 +1,6 @@
 import { app, shell, BrowserWindow, nativeImage } from 'electron'
 import { join } from 'path'
-import { existsSync } from 'fs'
+import { copyFileSync, existsSync } from 'fs'
 import { initDatabase } from './db'
 import { registerIpcHandlers } from './ipc'
 import { seedFreshInstall } from './services/repository'
@@ -12,12 +12,47 @@ let mainWindow: BrowserWindow | null = null
 const isDev = !app.isPackaged
 
 if (process.platform === 'win32') {
-  app.setAppUserModelId('com.fluxapi.app')
+  app.setAppUserModelId('com.lisek.app')
 }
 
-// Installed build uses its own profile — not the dev `fluxapi` Electron folder.
 if (app.isPackaged) {
-  app.setPath('userData', join(app.getPath('appData'), 'FluxAPI'))
+  app.setPath('userData', join(app.getPath('appData'), 'Lisek'))
+}
+
+function resolveDbPath(): string {
+  const userData = app.getPath('userData')
+  const dbPath = join(userData, 'lisek.db')
+  if (existsSync(dbPath)) return dbPath
+
+  const legacyDbPaths = [
+    join(app.getPath('appData'), 'FluxAPI', 'fluxapi.db'),
+    join(userData, 'fluxapi.db')
+  ]
+  for (const legacy of legacyDbPaths) {
+    if (existsSync(legacy)) {
+      copyFileSync(legacy, dbPath)
+      return dbPath
+    }
+  }
+  return dbPath
+}
+
+function resolveCookieJarPath(): string {
+  const userData = app.getPath('userData')
+  const cookiePath = join(userData, 'cookies.json')
+  if (existsSync(cookiePath)) return cookiePath
+
+  const legacyCookiePaths = [
+    join(app.getPath('appData'), 'FluxAPI', 'cookies.json'),
+    join(userData, 'cookies.json')
+  ]
+  for (const legacy of legacyCookiePaths) {
+    if (legacy !== cookiePath && existsSync(legacy)) {
+      copyFileSync(legacy, cookiePath)
+      return cookiePath
+    }
+  }
+  return cookiePath
 }
 
 function resolveAppIcon(): Electron.NativeImage | undefined {
@@ -26,16 +61,16 @@ function resolveAppIcon(): Electron.NativeImage | undefined {
   if (isDev) {
     candidates.push(
       join(process.cwd(), 'resources/icon.ico'),
-      join(process.cwd(), 'resources/fluxapi-logo.png')
+      join(process.cwd(), 'resources/lisek-logo.png')
     )
   }
 
   candidates.push(
     join(process.resourcesPath, 'icon.ico'),
-    join(process.resourcesPath, 'fluxapi-logo.png'),
+    join(process.resourcesPath, 'lisek-logo.png'),
     join(__dirname, '../../resources/icon.ico'),
-    join(__dirname, '../../resources/fluxapi-logo.png'),
-    join(__dirname, '../renderer/fluxapi-logo.png')
+    join(__dirname, '../../resources/lisek-logo.png'),
+    join(__dirname, '../renderer/lisek-logo.png')
   )
 
   for (const path of candidates) {
@@ -91,8 +126,8 @@ app.whenReady().then(async () => {
     app.dock?.setIcon(appIcon)
   }
 
-  const dbPath = join(app.getPath('userData'), 'fluxapi.db')
-  configureCookieJar(join(app.getPath('userData'), 'cookies.json'))
+  const dbPath = resolveDbPath()
+  configureCookieJar(resolveCookieJarPath())
   const { isNew } = await initDatabase(dbPath)
   if (isNew) {
     seedFreshInstall()

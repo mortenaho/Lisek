@@ -15,11 +15,11 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Write-Host 'Enabling GitHub Pages (main /docs)...'
-gh api repos/mortenaho/fluxapi/pages -X POST `
+gh api repos/mortenaho/Lisek/pages -X POST `
   -f build_type=legacy `
   -f 'source[branch]=main' `
   -f 'source[path]=/docs'
 
 Write-Host ''
 Write-Host 'Done. Site URL (wait 1-2 min):'
-Write-Host '  https://mortenaho.github.io/fluxapi/'
+Write-Host '  https://mortenaho.github.io/Lisek/'

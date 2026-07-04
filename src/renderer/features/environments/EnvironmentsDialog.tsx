@@ -53,7 +53,7 @@ export default function EnvironmentsDialog({ open, onClose }: Props) {
     async (vars: KeyValue[]) => {
       const env = useAppStore.getState().environments.find((e) => e.isActive)
       if (!env) return
-      await window.fluxAPI.environments.save({ ...env, variables: vars })
+      await window.lisek.environments.save({ ...env, variables: vars })
       await loadEnvironments()
     },
     [loadEnvironments]
@@ -115,17 +115,17 @@ export default function EnvironmentsDialog({ open, onClose }: Props) {
   }
 
   const createEnv = async () => {
-    await window.fluxAPI.environments.save({ name: 'New Environment', variables: [], isActive: false })
+    await window.lisek.environments.save({ name: 'New Environment', variables: [], isActive: false })
     await loadEnvironments()
   }
 
   const setActive = async (id: string) => {
-    await window.fluxAPI.environments.setActive(id)
+    await window.lisek.environments.setActive(id)
     await loadEnvironments()
   }
 
   const clearActive = async () => {
-    await window.fluxAPI.environments.setActive(null)
+    await window.lisek.environments.setActive(null)
     await loadEnvironments()
   }
 
@@ -134,14 +134,14 @@ export default function EnvironmentsDialog({ open, onClose }: Props) {
       setEditingName(false)
       return
     }
-    await window.fluxAPI.environments.save({ ...activeEnv, name: nameDraft.trim() })
+    await window.lisek.environments.save({ ...activeEnv, name: nameDraft.trim() })
     await loadEnvironments()
     setEditingName(false)
   }
 
   const deleteEnv = async () => {
     if (!deleteId) return
-    await window.fluxAPI.environments.delete(deleteId)
+    await window.lisek.environments.delete(deleteId)
     await loadEnvironments()
     setDeleteId(null)
   }

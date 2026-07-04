@@ -37,7 +37,7 @@ export default function CollectionVariablesDialog({ open, collection, onClose }:
 
   const save = async () => {
     if (!collection) return
-    await window.fluxAPI.collections.update(collection.id, { variables })
+    await window.lisek.collections.update(collection.id, { variables })
     await loadCollections()
     onClose()
   }

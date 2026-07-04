@@ -5,9 +5,9 @@ import { fileURLToPath } from 'url'
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
 const { version } = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'))
-const buildOutput = path.join(os.tmpdir(), 'fluxapi-dist')
+const buildOutput = path.join(os.tmpdir(), 'lisek-dist')
 const projectOutput = path.join(root, 'dist-installer')
-const installerName = `FluxAPI Setup ${version}.exe`
+const installerName = `Lisek Setup ${version}.exe`
 const src = path.join(buildOutput, installerName)
 const dest = path.join(projectOutput, installerName)
 

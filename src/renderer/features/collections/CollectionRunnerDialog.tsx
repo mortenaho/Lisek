@@ -38,7 +38,7 @@ export default function CollectionRunnerDialog({ open, collection, onClose }: Pr
     setRunning(true)
     setResults([])
     try {
-      const outcome = await window.fluxAPI.runner.runCollection(collection.id, stopOnFailure)
+      const outcome = await window.lisek.runner.runCollection(collection.id, stopOnFailure)
       setResults(outcome)
     } finally {
       setRunning(false)

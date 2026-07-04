@@ -75,14 +75,12 @@ const sharedComponents: ThemeOptions['components'] = {
   MuiAppBar: {
     defaultProps: { elevation: 0 },
     styleOverrides: {
-      root: ({ theme }) =>
-        theme.palette.mode === 'dark'
-          ? {
-              backgroundColor: theme.palette.background.paper,
-              color: theme.palette.text.primary,
-              borderBottom: `1px solid ${theme.palette.divider}`
-            }
-          : {}
+      root: {
+        backgroundColor: primaryLight.main,
+        color: primaryLight.contrastText,
+        borderBottom: 'none',
+        backgroundImage: 'none'
+      }
     }
   },
   MuiDrawer: {
@@ -90,7 +88,7 @@ const sharedComponents: ThemeOptions['components'] = {
       paper: ({ theme }) =>
         theme.palette.mode === 'dark'
           ? {
-              backgroundColor: '#12151c',
+              backgroundColor: '#0c0c0e',
               borderRight: `1px solid ${theme.palette.divider}`
             }
           : {
@@ -226,8 +224,7 @@ const sharedComponents: ThemeOptions['components'] = {
   MuiListItemButton: {
     styleOverrides: {
       root: ({ theme }) => ({
-        borderRadius: 6,
-        marginInline: 4,
+        borderRadius: 0,
         '&.Mui-selected': {
           backgroundColor:
             theme.palette.mode === 'dark' ? 'rgba(192, 132, 252, 0.2)' : 'rgba(86, 0, 114, 0.12)',
@@ -387,10 +384,10 @@ export function createAppTheme(mode: 'light' | 'dark') {
       ...(isDark
         ? {
             background: {
-              default: '#0b0e14',
-              paper: '#151922'
+              default: '#09090b',
+              paper: '#111113'
             },
-            divider: 'rgba(148, 163, 184, 0.16)',
+            divider: 'rgba(148, 163, 184, 0.12)',
             text: {
               primary: '#f1f5f9',
               secondary: '#94a3b8',

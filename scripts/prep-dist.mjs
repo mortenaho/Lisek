@@ -6,10 +6,10 @@ import { fileURLToPath } from 'url'
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
 const projectOutput = path.join(root, 'dist-installer')
-const buildOutput = path.join(os.tmpdir(), 'fluxapi-dist')
+const buildOutput = path.join(os.tmpdir(), 'lisek-dist')
 
 if (process.platform === 'win32') {
-  for (const name of ['FluxAPI', 'electron']) {
+  for (const name of ['Lisek', 'electron']) {
     try {
       execSync(`taskkill /F /IM ${name}.exe /T`, { stdio: 'ignore' })
     } catch {

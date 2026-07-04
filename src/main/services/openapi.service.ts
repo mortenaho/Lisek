@@ -262,7 +262,7 @@ export function exportToOpenApi(collectionId: string, filePath: string) {
 
   const spec = {
     openapi: '3.0.0',
-    info: { title: col?.name || 'FluxAPI Export', version: '1.0.0' },
+    info: { title: col?.name || 'Lisek Export', version: '1.0.0' },
     servers: [{ url: '{{baseUrl}}' }],
     paths: {} as Record<string, Record<string, unknown>>
   }

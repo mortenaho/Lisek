@@ -6,7 +6,6 @@ import {
   Typography,
   List,
   ListItemButton,
-  ListItemText,
   Collapse,
   Menu,
   MenuItem,
@@ -16,6 +15,9 @@ import {
   Divider
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
+import RefreshIcon from '@mui/icons-material/Refresh'
+import CreateNewFolderIcon from '@mui/icons-material/CreateNewFolder'
+import ImportExportIcon from '@mui/icons-material/ImportExport'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import DriveFileRenameOutlineIcon from '@mui/icons-material/DriveFileRenameOutline'
@@ -28,13 +30,17 @@ import PushPinIcon from '@mui/icons-material/PushPin'
 import PushPinOutlinedIcon from '@mui/icons-material/PushPinOutlined'
 import FileDownloadIcon from '@mui/icons-material/FileDownload'
 import TuneIcon from '@mui/icons-material/Tune'
+import DragIndicatorIcon from '@mui/icons-material/DragIndicator'
 import PlayArrowIcon from '@mui/icons-material/PlayArrow'
-import { useState, useMemo, useRef, useEffect } from 'react'
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { useAppStore } from '../../stores/appStore'
 import ConfirmDialog from '../../components/ConfirmDialog'
 import PromptDialog from '../../components/PromptDialog'
 import CollectionVariablesDialog from './CollectionVariablesDialog'
 import CollectionRunnerDialog from './CollectionRunnerDialog'
+import SidebarPanelHeader from '../../components/SidebarPanelHeader'
+import { useCollectionDragDrop } from './useCollectionDragDrop'
+import { COMPACT } from '../../theme/compact'
 import type { CollectionModel, RequestModel } from '@shared/types'
 
 const METHOD_COLORS: Record<string, string> = {
@@ -67,11 +73,88 @@ function MethodBadge({ method }: { method: string }) {
         bgcolor: METHOD_COLORS[method] || '#999',
         color: '#fff',
         mr: 0.75,
-        minWidth: 44
+        minWidth: 44,
+        flexShrink: 0
       }}
     />
   )
 }
+
+function renameInputSx(fontSize = 11) {
+  return {
+    flex: 1,
+    minWidth: 0,
+    my: 0,
+    ...COMPACT.input,
+    '& .MuiInputBase-root': {
+      height: 24,
+      py: 0,
+      fontSize
+    },
+    '& .MuiInputBase-input': {
+      py: 0.25,
+      px: 0.5,
+      fontSize,
+      lineHeight: 1.3
+    },
+    '& .MuiOutlinedInput-notchedOutline': {
+      borderWidth: 1
+    }
+  }
+}
+
+/** Full-width sidebar row — highlight reaches both edges. */
+function treeItemSx(depth: number, pinned?: boolean) {
+  return {
+    position: 'relative',
+    pl: 1.5 + depth * 1.5,
+    pr: 1,
+    py: 0.5,
+    m: 0,
+    mx: 0,
+    marginInline: 0,
+    borderRadius: 0,
+    width: '100%',
+    maxWidth: 'none',
+    boxSizing: 'border-box' as const,
+    ...(pinned ? { bgcolor: 'action.hover' as const } : {}),
+    '&:hover .tree-actions, &:focus-within .tree-actions': { opacity: 1, pointerEvents: 'auto' },
+    '&:hover .tree-title, &:focus-within .tree-title': {
+      maskImage: 'linear-gradient(to right, #000 75%, transparent 100%)',
+      WebkitMaskImage: 'linear-gradient(to right, #000 75%, transparent 100%)'
+    }
+  }
+}
+
+function treeTitleSx(active: boolean) {
+  return {
+    display: 'block',
+    flex: '1 1 auto',
+    minWidth: 0,
+    my: 0,
+    fontSize: 11,
+    lineHeight: 1.3,
+    fontWeight: active ? 600 : 400,
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap'
+  } as const
+}
+
+const collectionListSx = {
+  flex: 1,
+  overflow: 'auto',
+  width: '100%',
+  py: 0,
+  '& .MuiListItemButton-root': {
+    m: 0,
+    mx: 0,
+    marginInline: 0,
+    borderRadius: 0,
+    width: '100%',
+    maxWidth: 'none'
+  }
+} as const
 
 function ItemActions({
   target,
@@ -93,7 +176,23 @@ function ItemActions({
   return (
     <Box
       className="tree-actions"
-      sx={{ display: 'flex', opacity: 0, transition: 'opacity 0.15s', ml: 'auto' }}
+      sx={{
+        position: 'absolute',
+        top: 0,
+        right: 0,
+        bottom: 0,
+        display: 'flex',
+        alignItems: 'center',
+        opacity: 0,
+        pointerEvents: 'none',
+        transition: 'opacity 0.15s',
+        pl: 3,
+        pr: 0.25,
+        background: (theme) =>
+          theme.palette.mode === 'dark'
+            ? 'linear-gradient(to right, transparent, rgba(17, 17, 19, 0.92) 28px, rgba(17, 17, 19, 1))'
+            : 'linear-gradient(to right, transparent, rgba(255, 255, 255, 0.92) 28px, #fff)'
+      }}
       onClick={(e) => e.stopPropagation()}
     >
       <Tooltip title={pinned ? 'Unpin' : 'Pin'}>
@@ -166,6 +265,7 @@ export default function CollectionsPanel() {
   const setCollectionPinned = useAppStore((s) => s.setCollectionPinned)
   const setRequestPinned = useAppStore((s) => s.setRequestPinned)
   const loadRequests = useAppStore((s) => s.loadRequests)
+  const setImportDialog = useAppStore((s) => s.setImportDialog)
 
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   const [editing, setEditing] = useState<{ type: 'collection' | 'request'; id: string; value: string } | null>(null)
@@ -179,6 +279,44 @@ export default function CollectionsPanel() {
   useEffect(() => {
     if (editing) editInputRef.current?.focus()
   }, [editing])
+
+  const dragEnabled = !searchQuery && !editing
+
+  const handleMoveRequest = useCallback(
+    async (requestId: string, targetCollectionId: string | null, beforeRequestId: string | null) => {
+      try {
+        await window.lisek.requests.move(requestId, targetCollectionId, beforeRequestId)
+        const active = useAppStore.getState().activeRequest
+        if (active?.id === requestId) {
+          useAppStore.getState().updateActiveRequest({ collectionId: targetCollectionId })
+        }
+        await loadRequests()
+      } catch (err) {
+        console.error('[CollectionsPanel] move request failed:', err)
+      }
+    },
+    [loadRequests]
+  )
+
+  const {
+    dragRequestId,
+    bindDragHandle,
+    isDropBefore,
+    isDropAfter,
+    isDropIntoCollection
+  } = useCollectionDragDrop({
+    enabled: dragEnabled,
+    onMove: handleMoveRequest,
+    onExpandCollection: (collectionId) => setExpanded((e) => ({ ...e, [collectionId]: true })),
+    getInsertBeforeId: (collectionId, afterRequestId, excludeRequestId) => {
+      const list = requests
+        .filter((r) => r.collectionId === collectionId && r.id !== excludeRequestId)
+        .sort(comparePinnedSortOrder)
+      const idx = list.findIndex((r) => r.id === afterRequestId)
+      if (idx < 0) return null
+      return list[idx + 1]?.id ?? null
+    }
+  })
 
   const rootCollections = useMemo(
     () => collections.filter((c) => !c.parentId).sort(comparePinnedSortOrder),
@@ -212,7 +350,7 @@ export default function CollectionsPanel() {
       const req = requests.find((r) => r.id === editing.id)
       if (req) {
         const updated = { ...req, name }
-        await window.fluxAPI.requests.save(updated)
+        await window.lisek.requests.save(updated)
         if (activeRequestId === editing.id) updateActiveRequest({ name })
         await loadRequests()
       }
@@ -231,7 +369,7 @@ export default function CollectionsPanel() {
 
   const duplicateRequest = async (req: RequestModel) => {
     setMenuAnchor(null)
-    const copy = await window.fluxAPI.requests.save({
+    const copy = await window.lisek.requests.save({
       ...req,
       id: undefined,
       name: `${req.name} (Copy)`,
@@ -270,15 +408,15 @@ export default function CollectionsPanel() {
     setMenuAnchor(null)
     const col = collections.find((c) => c.id === collectionId)
     const safeName = (col?.name || 'collection').replace(/[^\w.-]+/g, '_')
-    const filePath = await window.fluxAPI.dialog.saveFile(`${safeName}.json`, [
+    const filePath = await window.lisek.dialog.saveFile(`${safeName}.json`, [
       { name: 'JSON', extensions: ['json'] },
       { name: 'YAML', extensions: ['yaml', 'yml'] }
     ])
     if (!filePath) return
     if (format === 'postman') {
-      await window.fluxAPI.export.postman(collectionId, filePath)
+      await window.lisek.export.postman(collectionId, filePath)
     } else {
-      await window.fluxAPI.export.openapi(collectionId, filePath)
+      await window.lisek.export.openapi(collectionId, filePath)
     }
   }
 
@@ -287,20 +425,46 @@ export default function CollectionsPanel() {
     const isEditing = editing?.type === 'request' && editing.id === req.id
 
     return (
-      <ListItemButton
+      <Box
         key={req.id}
+        data-request-id={req.id}
+        data-collection-id={req.collectionId ?? '__none__'}
+        sx={{ width: '100%' }}
+      >
+      <ListItemButton
+        disableGutters
         selected={isActive}
         sx={{
-          pl: 1.5 + depth * 1.5,
-          py: 0.5,
-          borderRadius: 1,
-          mx: 0.5,
-          bgcolor: req.pinned ? 'action.hover' : undefined,
-          '&:hover .tree-actions': { opacity: 1 }
+          ...treeItemSx(depth, req.pinned),
+          opacity: dragRequestId === req.id ? 0.45 : 1,
+          ...(isDropBefore(req.id)
+            ? { boxShadow: (t) => `inset 0 2px 0 0 ${t.palette.primary.main}` }
+            : isDropAfter(req.id)
+              ? { boxShadow: (t) => `inset 0 -2px 0 0 ${t.palette.primary.main}` }
+              : {})
         }}
         onClick={() => !isEditing && void selectRequest(req)}
         onDoubleClick={() => startRename('request', req.id, req.name)}
       >
+        {dragEnabled && (
+          <Box
+            component="span"
+            {...bindDragHandle(req.id)}
+            onClick={(e) => e.stopPropagation()}
+            sx={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              cursor: 'grab',
+              mr: 0.25,
+              flexShrink: 0,
+              color: 'text.disabled',
+              touchAction: 'none',
+              '&:active': { cursor: 'grabbing' }
+            }}
+          >
+            <DragIndicatorIcon sx={{ fontSize: 14, pointerEvents: 'none' }} />
+          </Box>
+        )}
         {req.pinned && (
           <PushPinIcon
             sx={{ fontSize: 12, mr: 0.5, color: 'primary.main', transform: 'rotate(45deg)' }}
@@ -311,7 +475,7 @@ export default function CollectionsPanel() {
           <TextField
             inputRef={editInputRef}
             size="small"
-            fullWidth
+            variant="outlined"
             value={editing.value}
             onChange={(e) => setEditing({ ...editing, value: e.target.value })}
             onBlur={commitRename}
@@ -320,6 +484,7 @@ export default function CollectionsPanel() {
               if (e.key === 'Escape') setEditing(null)
             }}
             onClick={(e) => e.stopPropagation()}
+            sx={renameInputSx(11)}
           />
         ) : (
           <Tooltip
@@ -337,16 +502,9 @@ export default function CollectionsPanel() {
             placement="right"
             enterDelay={500}
           >
-            <ListItemText
-              primary={req.name}
-              primaryTypographyProps={{
-                variant: 'caption',
-                noWrap: true,
-                fontWeight: isActive ? 600 : 400,
-                sx: { fontSize: 11, lineHeight: 1.3 }
-              }}
-              sx={{ flex: 1, minWidth: 0, my: 0 }}
-            />
+            <Box component="span" className="tree-title" sx={treeTitleSx(isActive)}>
+              {req.name}
+            </Box>
           </Tooltip>
         )}
         {!isEditing && (
@@ -360,6 +518,7 @@ export default function CollectionsPanel() {
           />
         )}
       </ListItemButton>
+      </Box>
     )
   }
 
@@ -372,13 +531,17 @@ export default function CollectionsPanel() {
     return (
       <Box key={col.id}>
         <ListItemButton
+          disableGutters
+          data-collection-drop={col.id}
           sx={{
-            pl: 0.5 + depth * 1.5,
-            py: 0.5,
-            borderRadius: 1,
-            mx: 0.5,
-            bgcolor: col.pinned ? 'action.hover' : undefined,
-            '&:hover .tree-actions': { opacity: 1 }
+            ...treeItemSx(depth, col.pinned),
+            ...(isDropIntoCollection(col.id)
+              ? {
+                  bgcolor: 'action.selected',
+                  outline: (t) => `1px dashed ${t.palette.primary.main}`,
+                  outlineOffset: -1
+                }
+              : {})
           }}
           onClick={() => !isEditing && toggle(col.id)}
           onDoubleClick={() => startRename('collection', col.id, col.name)}
@@ -393,7 +556,7 @@ export default function CollectionsPanel() {
             <TextField
               inputRef={editInputRef}
               size="small"
-              fullWidth
+              variant="outlined"
               value={editing.value}
               onChange={(e) => setEditing({ ...editing, value: e.target.value })}
               onBlur={commitRename}
@@ -402,14 +565,17 @@ export default function CollectionsPanel() {
                 if (e.key === 'Escape') setEditing(null)
               }}
               onClick={(e) => e.stopPropagation()}
+              sx={renameInputSx(13)}
             />
           ) : (
-            <ListItemText
-              primary={col.name}
-              secondary={`${colRequests.length} request${colRequests.length !== 1 ? 's' : ''}`}
-              primaryTypographyProps={{ variant: 'body2', noWrap: true, fontWeight: 500 }}
-              secondaryTypographyProps={{ variant: 'caption' }}
-            />
+            <Box className="tree-title" sx={{ flex: 1, minWidth: 0, my: 0 }}>
+              <Typography variant="body2" noWrap sx={{ fontWeight: 500, fontSize: 13, lineHeight: 1.3 }}>
+                {col.name}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block', lineHeight: 1.2 }}>
+                {colRequests.length} request{colRequests.length !== 1 ? 's' : ''}
+              </Typography>
+            </Box>
           )}
           {!isEditing && (
             <ItemActions
@@ -422,7 +588,7 @@ export default function CollectionsPanel() {
             />
           )}
         </ListItemButton>
-        <Collapse in={isOpen}>
+        <Collapse in={isOpen} data-collection-drop={col.id}>
           {children.map((c) => renderCollection(c, depth + 1))}
           {colRequests.map((req) => renderRequest(req, depth + 1))}
         </Collapse>
@@ -433,34 +599,49 @@ export default function CollectionsPanel() {
   const uncategorized = filteredRequests.filter((r) => !r.collectionId).sort(comparePinnedSortOrder)
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <Box sx={{ display: 'flex', gap: 0.5, mb: 1 }}>
-        <Button
-          size="small"
-          variant="outlined"
-          color="primary"
-          fullWidth
-          startIcon={<AddIcon />}
-          onClick={() => setNewCollectionOpen(true)}
-        >
-          Collection
-        </Button>
-        <Button size="small" variant="contained" fullWidth startIcon={<AddIcon />} onClick={() => createRequest()}>
-          Request
-        </Button>
-      </Box>
-      <TextField
-        size="small"
-        fullWidth
-        placeholder="Search requests..."
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
-        sx={{ mb: 1 }}
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%', minWidth: 0 }}>
+      <SidebarPanelHeader
+        panel="collections"
+        actions={
+          <>
+            <Tooltip title="Refresh">
+              <IconButton size="small" onClick={() => void loadRequests()}>
+                <RefreshIcon sx={{ fontSize: 18 }} />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="New collection">
+              <IconButton size="small" onClick={() => setNewCollectionOpen(true)}>
+                <CreateNewFolderIcon sx={{ fontSize: 18 }} />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="New request">
+              <IconButton size="small" onClick={() => void createRequest()}>
+                <AddIcon sx={{ fontSize: 18 }} />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Import">
+              <IconButton size="small" onClick={() => setImportDialog(true)}>
+                <ImportExportIcon sx={{ fontSize: 18 }} />
+              </IconButton>
+            </Tooltip>
+          </>
+        }
       />
-      <Typography variant="caption" color="text.secondary" sx={{ px: 0.5, mb: 0.5 }}>
-        Double-click to rename · Right-click menu via ⋮
-      </Typography>
-      <List dense disablePadding sx={{ flex: 1, overflow: 'auto' }}>
+      <Box sx={{ px: 1, pt: 1, pb: 0.5, flexShrink: 0 }}>
+        <TextField
+          size="small"
+          fullWidth
+          placeholder="Search endpoints..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+        {dragEnabled && (
+          <Typography sx={{ ...COMPACT.caption, display: 'block', mt: 0.5, px: 0.25 }}>
+            Drag requests by the ⋮⋮ handle — drop above/below rows or onto a collection folder
+          </Typography>
+        )}
+      </Box>
+      <List dense disablePadding sx={collectionListSx}>
         {rootCollections.length === 0 && uncategorized.length === 0 && (
           <Typography variant="body2" color="text.secondary" sx={{ p: 2, textAlign: 'center' }}>
             No collections yet. Create one to get started.
@@ -468,13 +649,29 @@ export default function CollectionsPanel() {
         )}
         {rootCollections.map((c) => renderCollection(c))}
         {uncategorized.length > 0 && (
-          <>
+          <Box data-collection-drop="__none__">
             <Divider sx={{ my: 1 }} />
-            <Typography variant="caption" sx={{ px: 1, color: 'text.secondary', fontWeight: 600 }}>
+            <Typography
+              variant="caption"
+              sx={{
+                display: 'block',
+                px: 1.5,
+                py: 0.75,
+                color: 'text.secondary',
+                fontWeight: 600,
+                ...(isDropIntoCollection(null)
+                  ? {
+                      bgcolor: 'action.selected',
+                      outline: (t) => `1px dashed ${t.palette.primary.main}`,
+                      outlineOffset: -1
+                    }
+                  : {})
+              }}
+            >
               Uncategorized
             </Typography>
             {uncategorized.map((req) => renderRequest(req, 0))}
-          </>
+          </Box>
         )}
       </List>
 

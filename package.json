@@ -1,5 +1,5 @@
 {
-  "name": "fluxapi",
+  "name": "lisek",
   "version": "1.2.3",
   "description": "Offline API client for HTTP, GraphQL, WebSocket, and gRPC",
   "main": "./out/main/index.js",
@@ -9,9 +9,10 @@
     "dev": "node scripts/brand-electron.mjs && electron-vite dev",
     "build": "electron-vite build",
     "preview": "node scripts/brand-electron.mjs && electron-vite preview",
-    "dist": "npm run build && node scripts/prep-dist.mjs && electron-builder --win --config.directories.output=%TEMP%\\fluxapi-dist && node scripts/post-dist.mjs",
+    "dist": "npm run build && node scripts/prep-dist.mjs && electron-builder --win --config.directories.output=%TEMP%\\lisek-dist && node scripts/post-dist.mjs",
     "dist:ci": "npm run build && electron-builder --win -p never",
     "icons": "node scripts/build-icons.mjs && node scripts/brand-electron.mjs",
+    "logo": "node scripts/process-logo.mjs && npm run icons",
     "postinstall": "node scripts/brand-electron.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
@@ -51,14 +52,15 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-syntax-highlighter": "^15.6.1",
+    "sharp": "^0.35.3",
     "typescript": "^5.8.2",
     "vite": "^6.2.1",
     "vitest": "^4.1.9",
     "zustand": "^5.0.3"
   },
   "build": {
-    "appId": "com.fluxapi.app",
-    "productName": "FluxAPI",
+    "appId": "com.lisek.app",
+    "productName": "Lisek",
     "directories": {
       "output": "dist-installer"
     },
@@ -75,12 +77,8 @@
         "to": "icon.ico"
       },
       {
-        "from": "resources/fluxapi-logo.png",
-        "to": "fluxapi-logo.png"
-      },
-      {
-        "from": "resources/fluxapi-logo.svg",
-        "to": "fluxapi-logo.svg"
+        "from": "resources/lisek-logo.png",
+        "to": "lisek-logo.png"
       }
     ],
     "asarUnpack": [
@@ -103,7 +101,7 @@
       "allowElevation": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "FluxAPI",
+      "shortcutName": "Lisek",
       "installerLanguages": [
         "en_US"
       ]

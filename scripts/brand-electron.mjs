@@ -26,11 +26,11 @@ await rcedit(electronExe, {
   icon,
   'version-string': {
     CompanyName: 'Seyyed Morteza Hosseini',
-    FileDescription: 'FluxAPI',
-    ProductName: 'FluxAPI',
-    InternalName: 'FluxAPI',
-    OriginalFilename: 'FluxAPI.exe'
+    FileDescription: 'Lisek',
+    ProductName: 'Lisek',
+    InternalName: 'Lisek',
+    OriginalFilename: 'Lisek.exe'
   }
 })
 
-console.log('[brand-electron] Applied FluxAPI icon to electron.exe')
+console.log('[brand-electron] Applied Lisek icon to electron.exe')

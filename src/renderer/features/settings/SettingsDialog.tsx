@@ -30,12 +30,12 @@ export default function SettingsDialog({ open, onClose, onShowAbout }: Props) {
 
   useEffect(() => {
     if (open) {
-      window.fluxAPI.settings.get().then(setSettings)
+      window.lisek.settings.get().then(setSettings)
     }
   }, [open])
 
   const save = async () => {
-    await window.fluxAPI.settings.set(settings)
+    await window.lisek.settings.set(settings)
     setThemeMode(settings.theme)
     onClose()
   }

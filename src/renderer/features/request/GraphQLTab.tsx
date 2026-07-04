@@ -140,7 +140,7 @@ export default function GraphQLTab() {
     setLoading(true)
     setError(null)
     try {
-      const result = (await window.fluxAPI.graphql.introspect(request.url, request.headers)) as IntrospectionData
+      const result = (await window.lisek.graphql.introspect(request.url, request.headers)) as IntrospectionData
       setSchema(result)
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))

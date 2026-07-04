@@ -14,7 +14,7 @@ export default function GrpcTab() {
   useEffect(() => {
     const load = async () => {
       if (!request.grpcProtoId) return
-      const services = await window.fluxAPI.grpc.getServices(request.grpcProtoId)
+      const services = await window.lisek.grpc.getServices(request.grpcProtoId)
       setServices(services)
     }
     load()
@@ -22,7 +22,7 @@ export default function GrpcTab() {
 
   const loadServices = async (protoId: string) => {
     patch({ grpcProtoId: protoId, grpcService: '', grpcMethod: '' })
-    const services = await window.fluxAPI.grpc.getServices(protoId)
+    const services = await window.lisek.grpc.getServices(protoId)
     setServices(services)
   }
 

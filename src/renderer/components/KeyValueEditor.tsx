@@ -172,7 +172,7 @@ function KeyValueEditor({
 
   const pickFile = useCallback(
     async (index: number) => {
-      const filePath = await window.fluxAPI.dialog.openFile([{ name: 'All Files', extensions: ['*'] }])
+      const filePath = await window.lisek.dialog.openFile([{ name: 'All Files', extensions: ['*'] }])
       if (!filePath) return
       onChange(
         items.map((row, i) =>

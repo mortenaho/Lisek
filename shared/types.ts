@@ -223,7 +223,7 @@ export interface AppInfo {
   website: string
 }
 
-export interface FluxAPI {
+export interface LisekAPI {
   request: {
     send: (payload: HttpRequestPayload) => Promise<SendResult>
     cancel: (id: string) => Promise<void>
@@ -239,6 +239,11 @@ export interface FluxAPI {
     get: (id: string) => Promise<RequestModel | null>
     save: (data: Partial<RequestModel> & { id?: string }) => Promise<RequestModel>
     delete: (id: string) => Promise<void>
+    move: (
+      requestId: string,
+      targetCollectionId: string | null,
+      beforeRequestId: string | null
+    ) => Promise<RequestModel>
   }
   environments: {
     list: () => Promise<EnvironmentModel[]>
@@ -334,7 +339,7 @@ export interface FluxAPI {
 
 declare global {
   interface Window {
-    fluxAPI: FluxAPI
+    lisek: LisekAPI
   }
 }
 

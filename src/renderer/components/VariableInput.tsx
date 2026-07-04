@@ -223,7 +223,7 @@ function VariableInput({
       if (!activeEnv) return
       const exists = activeEnv.variables.some((v) => v.key === trimmed)
       if (!exists) {
-        await window.fluxAPI.environments.save({
+        await window.lisek.environments.save({
           ...activeEnv,
           variables: [...activeEnv.variables, { id: uuidv4(), key: trimmed, value: '', enabled: true }]
         })

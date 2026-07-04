@@ -1,6 +1,5 @@
 import {
   Box,
-  Drawer,
   IconButton,
   Toolbar,
   AppBar,
@@ -8,7 +7,6 @@ import {
   Tooltip
 } from '@mui/material'
 import SettingsIcon from '@mui/icons-material/Settings'
-import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
 import Brightness4Icon from '@mui/icons-material/Brightness4'
 import Brightness7Icon from '@mui/icons-material/Brightness7'
 import { memo, useCallback, useRef, useState } from 'react'
@@ -26,17 +24,20 @@ import SettingsDialog from '../features/settings/SettingsDialog'
 import CookiesDialog from '../features/settings/CookiesDialog'
 import AboutDialog from '../features/about/AboutDialog'
 import ResizeHandle, { clamp, readStoredSize, storeSize } from '../components/ResizeHandle'
-import SidebarMenu from './SidebarMenu'
+import SidebarPanelHeader from '../components/SidebarPanelHeader'
+import IconRail from './IconRail'
+import EnvironmentSelector from './EnvironmentSelector'
 import { APP_LOGO } from '../utils/assets'
 
 const SIDEBAR_MIN = 220
-const SIDEBAR_MAX = 520
-const SIDEBAR_DEFAULT = 300
-const RESPONSE_MIN = 150
-const RESPONSE_DEFAULT = 320
+const SIDEBAR_MAX = 420
+const SIDEBAR_DEFAULT = 280
+const RESPONSE_MIN = 280
+const RESPONSE_MAX = 720
+const RESPONSE_DEFAULT = 400
 
-const STORAGE_SIDEBAR = 'fluxapi:sidebar-width'
-const STORAGE_RESPONSE = 'fluxapi:response-height'
+const STORAGE_SIDEBAR = 'lisek:sidebar-width'
+const STORAGE_RESPONSE = 'lisek:response-width'
 
 const MemoRequestBuilder = memo(RequestBuilder)
 const MemoResponsePanel = memo(ResponsePanel)
@@ -56,68 +57,83 @@ export default function MainLayout() {
   const [sidebarWidth, setSidebarWidth] = useState(() =>
     clamp(readStoredSize(STORAGE_SIDEBAR, SIDEBAR_DEFAULT), SIDEBAR_MIN, SIDEBAR_MAX)
   )
-  const [responseHeight, setResponseHeight] = useState(() =>
-    Math.max(RESPONSE_MIN, readStoredSize(STORAGE_RESPONSE, RESPONSE_DEFAULT))
+  const [responseWidth, setResponseWidth] = useState(() =>
+    clamp(readStoredSize(STORAGE_RESPONSE, RESPONSE_DEFAULT), RESPONSE_MIN, RESPONSE_MAX)
   )
 
   const sidebarWrapRef = useRef<HTMLDivElement>(null)
   const responseWrapRef = useRef<HTMLDivElement>(null)
   const sidebarWidthRef = useRef(sidebarWidth)
-  const responseHeightRef = useRef(responseHeight)
+  const responseWidthRef = useRef(responseWidth)
   sidebarWidthRef.current = sidebarWidth
-  responseHeightRef.current = responseHeight
+  responseWidthRef.current = responseWidth
 
   const applySidebarWidth = useCallback((width: number) => {
     if (sidebarWrapRef.current) sidebarWrapRef.current.style.width = `${width}px`
   }, [])
 
-  const applyResponseHeight = useCallback((height: number) => {
-    if (responseWrapRef.current) responseWrapRef.current.style.height = `${height}px`
+  const applyResponseWidth = useCallback((width: number) => {
+    if (responseWrapRef.current) responseWrapRef.current.style.width = `${width}px`
   }, [])
 
-  const getResponseMax = useCallback(() => window.innerHeight - 48 - 180, [])
+  const getResponseMax = useCallback(
+    () => Math.min(RESPONSE_MAX, Math.floor(window.innerWidth * 0.55)),
+    []
+  )
 
   const commitSidebarWidth = useCallback((width: number) => {
     setSidebarWidth(width)
     storeSize(STORAGE_SIDEBAR, width)
   }, [])
 
-  const commitResponseHeight = useCallback((height: number) => {
-    setResponseHeight(height)
-    storeSize(STORAGE_RESPONSE, height)
+  const commitResponseWidth = useCallback((width: number) => {
+    setResponseWidth(width)
+    storeSize(STORAGE_RESPONSE, width)
   }, [])
 
   return (
-    <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', bgcolor: 'background.default' }}>
       <AppBar position="fixed" sx={{ zIndex: (t) => t.zIndex.drawer + 1 }}>
-        <Toolbar variant="dense">
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 2 }}>
+        <Toolbar variant="dense" sx={{ minHeight: 48, gap: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 0.5 }}>
             <Box
               component="img"
               src={APP_LOGO}
-              alt="FluxAPI"
-              sx={{ width: 28, height: 28, display: 'block' }}
+              alt="Lisek"
+              sx={{ width: 26, height: 26, display: 'block' }}
             />
-            <Typography variant="h6" sx={{ fontWeight: 700 }}>
-              FluxAPI
+            <Typography
+              variant="h6"
+              sx={{ fontWeight: 700, fontSize: 17, letterSpacing: '-0.02em', color: '#ffffff' }}
+            >
+              Lisek
             </Typography>
           </Box>
+
+          <EnvironmentSelector
+            activeEnvName={activeEnvName}
+            onOpen={() => setEnvDialogOpen(true)}
+          />
+
           <Box sx={{ flexGrow: 1 }} />
+
           <Tooltip title="Toggle theme">
             <IconButton
               color="inherit"
+              size="small"
+              sx={{ color: 'rgba(255,255,255,0.9)', '&:hover': { bgcolor: 'rgba(255,255,255,0.12)' } }}
               onClick={() => themeMode(currentTheme === 'light' ? 'dark' : 'light')}
             >
               {currentTheme === 'light' ? <Brightness4Icon /> : <Brightness7Icon />}
             </IconButton>
           </Tooltip>
-          <Tooltip title="About">
-            <IconButton color="inherit" onClick={() => setAboutOpen(true)}>
-              <InfoOutlinedIcon />
-            </IconButton>
-          </Tooltip>
           <Tooltip title="Settings">
-            <IconButton color="inherit" onClick={() => setSettingsOpen(true)}>
+            <IconButton
+              color="inherit"
+              size="small"
+              sx={{ color: 'rgba(255,255,255,0.9)', '&:hover': { bgcolor: 'rgba(255,255,255,0.12)' } }}
+              onClick={() => setSettingsOpen(true)}
+            >
               <SettingsIcon />
             </IconButton>
           </Tooltip>
@@ -127,12 +143,20 @@ export default function MainLayout() {
       <Box
         sx={{
           display: 'flex',
-          width: '100%',
+          flex: 1,
           mt: '48px',
-          height: 'calc(100vh - 48px)',
+          minHeight: 0,
           overflow: 'hidden'
         }}
       >
+        <IconRail
+          activePanel={activeSidebar}
+          onSelectPanel={setActiveSidebar}
+          onImport={() => setImportDialog(true)}
+          onSnippet={() => setSnippetOpen(true)}
+          onCookies={() => setCookiesOpen(true)}
+        />
+
         <Box
           ref={sidebarWrapRef}
           sx={{
@@ -140,44 +164,24 @@ export default function MainLayout() {
             flexShrink: 0,
             height: '100%',
             overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
+            bgcolor: 'background.paper',
+            borderRight: 1,
+            borderColor: 'divider',
             contain: 'layout style'
           }}
         >
-          <Drawer
-            variant="permanent"
-            sx={{
-              width: '100%',
-              height: '100%',
-              display: 'flex',
-              flexDirection: 'column',
-              [`& .MuiDrawer-paper`]: {
-                width: '100%',
-                boxSizing: 'border-box',
-                position: 'relative',
-                height: '100%',
-                border: 'none',
-                display: 'flex',
-                flexDirection: 'column',
-                overflow: 'hidden'
-              }
-            }}
-          >
-            <SidebarMenu
-              activePanel={activeSidebar}
-              activeEnvName={activeEnvName}
-              onSelectPanel={setActiveSidebar}
-              onOpenEnvironments={() => setEnvDialogOpen(true)}
-              onImport={() => setImportDialog(true)}
-              onSnippet={() => setSnippetOpen(true)}
-              onCookies={() => setCookiesOpen(true)}
-            />
-            <Box sx={{ flex: 1, overflow: 'auto', p: 1, minHeight: 0 }} data-resize-panel>
-              {activeSidebar === 'collections' && <CollectionsPanel />}
-              {activeSidebar === 'history' && <HistoryPanel />}
-              {activeSidebar === 'openapi' && <OpenApiPanel />}
-              {activeSidebar === 'proto' && <ProtoPanel />}
-            </Box>
-          </Drawer>
+          {activeSidebar === 'history' && <SidebarPanelHeader panel="history" />}
+          {activeSidebar === 'openapi' && <SidebarPanelHeader panel="openapi" />}
+          {activeSidebar === 'proto' && <SidebarPanelHeader panel="proto" />}
+
+          <Box sx={{ flex: 1, overflow: 'auto', minHeight: 0, px: activeSidebar === 'collections' ? 0 : 1, py: activeSidebar === 'collections' ? 0 : 1 }} data-resize-panel>
+            {activeSidebar === 'collections' && <CollectionsPanel />}
+            {activeSidebar === 'history' && <HistoryPanel />}
+            {activeSidebar === 'openapi' && <OpenApiPanel />}
+            {activeSidebar === 'proto' && <ProtoPanel />}
+          </Box>
         </Box>
 
         <ResizeHandle
@@ -189,28 +193,50 @@ export default function MainLayout() {
           onCommit={commitSidebarWidth}
         />
 
-        <Box component="main" sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden', bgcolor: 'background.default' }}>
-          <Box sx={{ flex: 1, overflow: 'auto', minHeight: 0, contain: 'layout style' }} data-resize-panel>
+        <Box
+          component="main"
+          sx={{
+            flex: 1,
+            display: 'flex',
+            minWidth: 0,
+            overflow: 'hidden',
+            bgcolor: 'background.default'
+          }}
+        >
+          <Box
+            sx={{
+              flex: 1,
+              overflow: 'auto',
+              minWidth: 0,
+              minHeight: 0,
+              contain: 'layout style',
+              borderRight: 1,
+              borderColor: 'divider'
+            }}
+            data-resize-panel
+          >
             <MemoRequestBuilder />
           </Box>
+
           <ResizeHandle
-            axis="y"
+            axis="x"
             min={RESPONSE_MIN}
             max={getResponseMax()}
-            getSize={() => responseHeightRef.current}
-            onLiveResize={applyResponseHeight}
-            onCommit={commitResponseHeight}
+            getSize={() => responseWidthRef.current}
+            onLiveResize={applyResponseWidth}
+            onCommit={commitResponseWidth}
+            invert
           />
+
           <Box
             ref={responseWrapRef}
             data-resize-panel
             sx={{
-              height: responseHeight,
-              minHeight: RESPONSE_MIN,
+              width: responseWidth,
+              minWidth: RESPONSE_MIN,
               flexShrink: 0,
               overflow: 'hidden',
-              borderTop: 1,
-              borderColor: 'divider',
+              bgcolor: 'background.paper',
               contain: 'layout style'
             }}
           >

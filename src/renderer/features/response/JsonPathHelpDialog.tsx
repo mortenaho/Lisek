@@ -53,7 +53,7 @@ interface Props {
 
 export default function JsonPathHelpDialog({ open, onClose, onUseExample }: Props) {
   const copy = async (text: string) => {
-    await window.fluxAPI.clipboard.writeText(text)
+    await window.lisek.clipboard.writeText(text)
   }
 
   return (

@@ -314,6 +314,56 @@ export function deleteRequest(id: string) {
   runQuery('DELETE FROM requests WHERE id = ?', [id])
 }
 
+function sortRequestsByDisplay(a: RequestModel, b: RequestModel) {
+  if (a.pinned !== b.pinned) return a.pinned ? -1 : 1
+  return a.sortOrder - b.sortOrder
+}
+
+function listRequestsInCollection(collectionId: string | null, excludeId?: string): RequestModel[] {
+  return listRequests()
+    .filter((r) => r.collectionId === collectionId && r.id !== excludeId)
+    .sort(sortRequestsByDisplay)
+}
+
+/** Move a request within or across collections; insert before `beforeRequestId` or append when null. */
+export function moveRequest(
+  requestId: string,
+  targetCollectionId: string | null,
+  beforeRequestId: string | null
+): RequestModel {
+  const moving = getRequest(requestId)
+  if (!moving) throw new Error('Request not found')
+
+  const sourceCollectionId = moving.collectionId
+  const targetList = listRequestsInCollection(targetCollectionId, requestId)
+
+  let insertAt = targetList.length
+  if (beforeRequestId) {
+    const idx = targetList.findIndex((r) => r.id === beforeRequestId)
+    if (idx >= 0) insertAt = idx
+  }
+
+  const orderedIds = targetList.map((r) => r.id)
+  orderedIds.splice(insertAt, 0, requestId)
+
+  let moved: RequestModel = moving
+  orderedIds.forEach((id, sortOrder) => {
+    if (id === requestId) {
+      moved = saveRequest({ id, collectionId: targetCollectionId, sortOrder })
+    } else {
+      saveRequest({ id, sortOrder })
+    }
+  })
+
+  if (sourceCollectionId !== targetCollectionId) {
+    listRequestsInCollection(sourceCollectionId).forEach((r, sortOrder) => {
+      saveRequest({ id: r.id, sortOrder })
+    })
+  }
+
+  return moved
+}
+
 export function saveRequestLastResponse(id: string, response: HttpResponse, testResults: TestResult[] = []) {
   runQuery(
     'UPDATE requests SET last_response_json = ?, last_test_results_json = ?, updated_at = ? WHERE id = ?',

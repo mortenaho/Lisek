@@ -122,7 +122,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   searchQuery: '',
 
   loadInitial: async () => {
-    const settings = await window.fluxAPI.settings.get()
+    const settings = await window.lisek.settings.get()
     set({ settings, themeMode: settings.theme })
     await Promise.all([
       get().loadCollections(),
@@ -135,7 +135,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   setThemeMode: async (mode) => {
-    await window.fluxAPI.settings.set({ theme: mode })
+    await window.lisek.settings.set({ theme: mode })
     set({ themeMode: mode, settings: { ...get().settings, theme: mode } })
   },
 
@@ -154,7 +154,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ activeRequest: req })
 
     if (req.id) {
-      const full = await window.fluxAPI.requests.get(req.id)
+      const full = await window.lisek.requests.get(req.id)
       if (full && get().activeRequest?.id === full.id) {
         set({
           activeRequest: full,
@@ -181,32 +181,32 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   loadCollections: async () => {
-    const collections = await window.fluxAPI.collections.list()
+    const collections = await window.lisek.collections.list()
     set({ collections })
   },
 
   loadRequests: async () => {
-    const requests = await window.fluxAPI.requests.list()
+    const requests = await window.lisek.requests.list()
     set({ requests })
   },
 
   loadEnvironments: async () => {
-    const environments = await window.fluxAPI.environments.list()
+    const environments = await window.lisek.environments.list()
     set({ environments })
   },
 
   loadHistory: async () => {
-    const history = await window.fluxAPI.history.list()
+    const history = await window.lisek.history.list()
     set({ history })
   },
 
   loadOpenApiSpecs: async () => {
-    const openapiSpecs = await window.fluxAPI.openapi.list()
+    const openapiSpecs = await window.lisek.openapi.list()
     set({ openapiSpecs })
   },
 
   loadProtoFiles: async () => {
-    const protoFiles = await window.fluxAPI.proto.list()
+    const protoFiles = await window.lisek.proto.list()
     set({ protoFiles })
   },
 
@@ -218,13 +218,13 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     try {
       if (saved.protocol === 'websocket') {
-        const id = await window.fluxAPI.ws.connect(saved.wsUrl || saved.url, saved.headers)
+        const id = await window.lisek.ws.connect(saved.wsUrl || saved.url, saved.headers)
         set({ wsConnectionId: id })
         return
       }
 
       if (saved.protocol === 'grpc') {
-        const result = await window.fluxAPI.grpc.invoke({
+        const result = await window.lisek.grpc.invoke({
           target: saved.grpcTarget,
           protoId: saved.grpcProtoId!,
           service: saved.grpcService,
@@ -251,7 +251,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       const activeEnv = get().environments.find((e) => e.isActive)
       const collection = get().collections.find((c) => c.id === saved.collectionId)
 
-      const result = await window.fluxAPI.request.send({
+      const result = await window.lisek.request.send({
         requestId: saved.id,
         method: saved.method,
         url: saved.url,
@@ -305,30 +305,30 @@ export const useAppStore = create<AppState>((set, get) => ({
   persistActiveRequest: async () => {
     const req = get().activeRequest
     if (!req) return null
-    const saved = await window.fluxAPI.requests.save(req)
+    const saved = await window.lisek.requests.save(req)
     set({ activeRequest: saved })
     await get().loadRequests()
     return saved
   },
 
   createCollection: async (name, parentId = null) => {
-    await window.fluxAPI.collections.create({ name, parentId })
+    await window.lisek.collections.create({ name, parentId })
     await get().loadCollections()
   },
 
   deleteCollection: async (id) => {
-    await window.fluxAPI.collections.delete(id)
+    await window.lisek.collections.delete(id)
     await get().loadCollections()
     await get().loadRequests()
   },
 
   renameCollection: async (id, name) => {
-    await window.fluxAPI.collections.update(id, { name })
+    await window.lisek.collections.update(id, { name })
     await get().loadCollections()
   },
 
   setCollectionPinned: async (id, pinned) => {
-    await window.fluxAPI.collections.update(id, { pinned })
+    await window.lisek.collections.update(id, { pinned })
     await get().loadCollections()
   },
 
@@ -340,7 +340,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       scriptLogs: []
     })
 
-    const saved = await window.fluxAPI.requests.save({
+    const saved = await window.lisek.requests.save({
       name: 'New Request',
       collectionId,
       method: 'GET',
@@ -352,7 +352,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   deleteRequest: async (id) => {
-    await window.fluxAPI.requests.delete(id)
+    await window.lisek.requests.delete(id)
     if (get().activeRequest?.id === id) {
       set({ activeRequest: emptyRequest(), response: null, testResults: [], scriptLogs: [] })
     }
@@ -362,7 +362,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   setRequestPinned: async (id, pinned) => {
     const req = get().requests.find((r) => r.id === id)
     if (!req) return
-    await window.fluxAPI.requests.save({ ...req, pinned })
+    await window.lisek.requests.save({ ...req, pinned })
     await get().loadRequests()
   },
 

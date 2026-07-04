@@ -60,11 +60,11 @@ export default function OpenApiPanel() {
   }, [loadOpenApiSpecs])
 
   const importSpec = async () => {
-    const path = await window.fluxAPI.dialog.openFile([
+    const path = await window.lisek.dialog.openFile([
       { name: 'OpenAPI/Swagger', extensions: ['json', 'yaml', 'yml'] }
     ])
     if (path) {
-      await window.fluxAPI.import.openapi(path)
+      await window.lisek.import.openapi(path)
       await loadOpenApiSpecs()
       await loadCollections()
       await loadRequests()
@@ -72,7 +72,7 @@ export default function OpenApiPanel() {
   }
 
   const deleteSpec = async (id: string) => {
-    await window.fluxAPI.openapi.delete(id)
+    await window.lisek.openapi.delete(id)
     await loadOpenApiSpecs()
     setExpanded((prev) => {
       const next = { ...prev }
@@ -94,7 +94,7 @@ export default function OpenApiPanel() {
       if (!isOpen && !pathsBySpec[spec.id]) {
         setLoadingId(spec.id)
         try {
-          const paths = await window.fluxAPI.openapi.getPaths(spec.id)
+          const paths = await window.lisek.openapi.getPaths(spec.id)
           setPathsBySpec((prev) => ({ ...prev, [spec.id]: paths }))
         } catch {
           setPathsBySpec((prev) => ({ ...prev, [spec.id]: [] }))
@@ -107,7 +107,7 @@ export default function OpenApiPanel() {
   )
 
   const createRequest = async (specId: string, item: OpenApiPathItem) => {
-    const req = await window.fluxAPI.openapi.generateRequest(specId, item.path, item.method)
+    const req = await window.lisek.openapi.generateRequest(specId, item.path, item.method)
     await loadRequests()
     await selectRequest(req)
   }

@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { FluxAPI } from '../../shared/types'
+import type { LisekAPI } from '../../shared/types'
 
-const fluxAPI: FluxAPI = {
+const lisek: LisekAPI = {
   request: {
     send: (payload) => ipcRenderer.invoke('request:send', payload),
     cancel: (id) => ipcRenderer.invoke('request:cancel', id)
@@ -16,7 +16,9 @@ const fluxAPI: FluxAPI = {
     list: (collectionId?) => ipcRenderer.invoke('requests:list', collectionId),
     get: (id) => ipcRenderer.invoke('requests:get', id),
     save: (data) => ipcRenderer.invoke('requests:save', data),
-    delete: (id) => ipcRenderer.invoke('requests:delete', id)
+    delete: (id) => ipcRenderer.invoke('requests:delete', id),
+    move: (requestId, targetCollectionId, beforeRequestId) =>
+      ipcRenderer.invoke('requests:move', requestId, targetCollectionId, beforeRequestId)
   },
   environments: {
     list: () => ipcRenderer.invoke('environments:list'),
@@ -110,4 +112,4 @@ const fluxAPI: FluxAPI = {
   }
 }
 
-contextBridge.exposeInMainWorld('fluxAPI', fluxAPI)
+contextBridge.exposeInMainWorld('lisek', lisek)

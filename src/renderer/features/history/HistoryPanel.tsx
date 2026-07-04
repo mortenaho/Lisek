@@ -7,7 +7,7 @@ export default function HistoryPanel() {
   const loadHistory = useAppStore((s) => s.loadHistory)
 
   const clearHistory = async () => {
-    await window.fluxAPI.history.clear()
+    await window.lisek.history.clear()
     await loadHistory()
   }
 

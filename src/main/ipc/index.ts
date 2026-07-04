@@ -35,6 +35,7 @@ import {
   getRequest,
   saveRequest,
   deleteRequest,
+  moveRequest,
   saveRequestLastResponse,
   listEnvironments,
   saveEnvironment,
@@ -56,7 +57,7 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null) {
       if (win) {
         dialog.showMessageBoxSync(win, {
           type: 'info',
-          title: 'FluxAPI Script',
+          title: 'Lisek Script',
           message,
           buttons: ['OK']
         })
@@ -67,7 +68,7 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null) {
       if (!win) return true
       const response = dialog.showMessageBoxSync(win, {
         type: 'question',
-        title: 'FluxAPI Script',
+          title: 'Lisek Script',
         message,
         buttons: ['OK', 'Cancel'],
         cancelId: 1
@@ -163,6 +164,9 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null) {
   ipcMain.handle('requests:get', (_, id) => getRequest(id))
   ipcMain.handle('requests:save', (_, data) => saveRequest(data))
   ipcMain.handle('requests:delete', (_, id) => deleteRequest(id))
+  ipcMain.handle('requests:move', (_, requestId, targetCollectionId, beforeRequestId) =>
+    moveRequest(requestId, targetCollectionId ?? null, beforeRequestId ?? null)
+  )
 
   ipcMain.handle('environments:list', () => listEnvironments())
   ipcMain.handle('environments:save', (_, data) => saveEnvironment(data))

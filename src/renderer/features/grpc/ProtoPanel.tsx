@@ -41,15 +41,15 @@ export default function ProtoPanel() {
   }, [loadProtoFiles])
 
   const importProto = async () => {
-    const path = await window.fluxAPI.dialog.openFile([{ name: 'Proto', extensions: ['proto'] }])
+    const path = await window.lisek.dialog.openFile([{ name: 'Proto', extensions: ['proto'] }])
     if (path) {
-      await window.fluxAPI.proto.import(path)
+      await window.lisek.proto.import(path)
       await loadProtoFiles()
     }
   }
 
   const deleteProto = async (id: string) => {
-    await window.fluxAPI.proto.delete(id)
+    await window.lisek.proto.delete(id)
     await loadProtoFiles()
     setExpanded((prev) => {
       const next = { ...prev }
@@ -71,7 +71,7 @@ export default function ProtoPanel() {
       if (!isOpen && !servicesByProto[proto.id]) {
         setLoadingId(proto.id)
         try {
-          const services = await window.fluxAPI.grpc.getServices(proto.id)
+          const services = await window.lisek.grpc.getServices(proto.id)
           setServicesByProto((prev) => ({ ...prev, [proto.id]: services }))
         } catch {
           setServicesByProto((prev) => ({ ...prev, [proto.id]: [] }))

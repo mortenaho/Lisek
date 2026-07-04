@@ -21,7 +21,7 @@ export default function CurlSnippetDialog() {
     if (!req) return
 
     if (req.id) {
-      window.fluxAPI.export.curl(req.id).then(setSnippet).catch(() => {
+      window.lisek.export.curl(req.id).then(setSnippet).catch(() => {
         setSnippet(`curl -X ${req.method} '${req.url}'`)
       })
     } else {
@@ -30,7 +30,7 @@ export default function CurlSnippetDialog() {
   }, [open, requestId])
 
   const copy = async () => {
-    await window.fluxAPI.clipboard.writeText(snippet)
+    await window.lisek.clipboard.writeText(snippet)
   }
 
   return (

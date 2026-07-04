@@ -12,6 +12,7 @@ import {
   getRequest,
   deleteRequest,
   listRequests,
+  moveRequest,
   saveEnvironment,
   setActiveEnvironment,
   getActiveEnvironment,
@@ -101,6 +102,31 @@ describe('Database & repository integration', () => {
     const ordered = listRequests(col.id)
     expect(ordered[0].id).toBe(second.id)
     expect(ordered[1].id).toBe(first.id)
+  })
+
+  it('requests — moveRequest reorders within a collection', () => {
+    const col = createCollection({ name: 'Move Collection' })
+    saveRequest({ collectionId: col.id, name: 'A', method: 'GET', url: 'https://a.test' })
+    const b = saveRequest({ collectionId: col.id, name: 'B', method: 'GET', url: 'https://b.test' })
+    saveRequest({ collectionId: col.id, name: 'C', method: 'GET', url: 'https://c.test' })
+
+    expect(listRequests(col.id).map((r) => r.name)).toEqual(['C', 'B', 'A'])
+
+    moveRequest(b.id, col.id, null)
+
+    expect(listRequests(col.id).map((r) => r.name)).toEqual(['C', 'A', 'B'])
+  })
+
+  it('requests — moveRequest moves to another collection', () => {
+    const colA = createCollection({ name: 'Col A' })
+    const colB = createCollection({ name: 'Col B' })
+    const req = saveRequest({ collectionId: colA.id, name: 'Moved', method: 'GET', url: 'https://x.test' })
+
+    moveRequest(req.id, colB.id, null)
+
+    expect(listRequests(colA.id)).toHaveLength(0)
+    expect(listRequests(colB.id).some((r) => r.id === req.id)).toBe(true)
+    expect(getRequest(req.id)?.collectionId).toBe(colB.id)
   })
 
   it('collections — create and list', () => {

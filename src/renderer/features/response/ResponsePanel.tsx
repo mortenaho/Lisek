@@ -12,7 +12,8 @@ import {
   IconButton,
   Tooltip,
   ToggleButton,
-  ToggleButtonGroup
+  ToggleButtonGroup,
+  Button
 } from '@mui/material'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import CancelIcon from '@mui/icons-material/Cancel'
@@ -22,6 +23,7 @@ import WrapTextIcon from '@mui/icons-material/WrapText'
 import FileDownloadIcon from '@mui/icons-material/FileDownload'
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline'
 import CloseIcon from '@mui/icons-material/Close'
+import BoltIcon from '@mui/icons-material/Bolt'
 import { forwardRef, memo, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
 import type { editor } from 'monaco-editor'
 import { useTheme } from '@mui/material/styles'
@@ -77,7 +79,7 @@ const ResponseBodyView = memo(
   }, [responseKey])
 
   const copyBody = useCallback(async () => {
-    await window.fluxAPI.clipboard.writeText(view.formatted)
+    await window.lisek.clipboard.writeText(view.formatted)
     setCopied(true)
     window.setTimeout(() => setCopied(false), 1500)
   }, [view.formatted])
@@ -415,6 +417,71 @@ function KeyValueList({ items, emptyText }: { items: KeyValue[]; emptyText: stri
   )
 }
 
+const EXAMPLE_REQUESTS = [
+  { label: 'GET JSONPlaceholder', url: 'https://jsonplaceholder.typicode.com/posts/1', method: 'GET' as const },
+  { label: 'GET GitHub API', url: 'https://api.github.com/repos/electron/electron', method: 'GET' as const },
+  { label: 'GET HTTPBin', url: 'https://httpbin.org/get', method: 'GET' as const }
+]
+
+function ResponseEmptyState() {
+  const tryExample = useCallback(
+    async (url: string, method: 'GET') => {
+      const state = useAppStore.getState()
+      if (!state.activeRequest) {
+        await state.createRequest()
+      }
+      state.updateActiveRequest({ url, method, protocol: 'http' })
+      await state.sendRequest()
+    },
+    []
+  )
+
+  return (
+    <Box
+      sx={{
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        px: 2,
+        py: 4,
+        textAlign: 'center'
+      }}
+    >
+      <BoltIcon sx={{ fontSize: 40, color: 'primary.main', mb: 1.5, opacity: 0.9 }} />
+      <Typography sx={{ fontSize: 13, color: 'text.secondary', mb: 2, maxWidth: 280, lineHeight: 1.5 }}>
+        No response yet. Enter a URL and press Send — or try an example:
+      </Typography>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75, width: '100%', maxWidth: 260 }}>
+        {EXAMPLE_REQUESTS.map((ex) => (
+          <Button
+            key={ex.url}
+            size="small"
+            variant="outlined"
+            onClick={() => void tryExample(ex.url, ex.method)}
+            sx={{
+              justifyContent: 'flex-start',
+              textTransform: 'none',
+              fontSize: 11,
+              py: 0.75,
+              borderColor: 'divider',
+              color: 'text.secondary',
+              '&:hover': {
+                borderColor: 'primary.main',
+                color: 'primary.main',
+                bgcolor: 'action.hover'
+              }
+            }}
+          >
+            {ex.label}
+          </Button>
+        ))}
+      </Box>
+    </Box>
+  )
+}
+
 function ResponseActions({ response }: { response: HttpResponse }) {
   const [copied, setCopied] = useState(false)
 
@@ -423,13 +490,13 @@ function ResponseActions({ response }: { response: HttpResponse }) {
   }, [response.statusCode, response.body.length])
 
   const copyFullResponse = useCallback(async () => {
-    await window.fluxAPI.clipboard.writeText(formatFullResponseText(response))
+    await window.lisek.clipboard.writeText(formatFullResponseText(response))
     setCopied(true)
     window.setTimeout(() => setCopied(false), 1500)
   }, [response])
 
   const downloadFullResponse = useCallback(async () => {
-    const filePath = await window.fluxAPI.dialog.saveFile(defaultResponseDownloadName(response), [
+    const filePath = await window.lisek.dialog.saveFile(defaultResponseDownloadName(response), [
       { name: 'JSON', extensions: ['json'] },
       { name: 'Text', extensions: ['txt'] }
     ])
@@ -439,7 +506,7 @@ function ResponseActions({ response }: { response: HttpResponse }) {
       ? formatFullResponseText(response)
       : serializeFullResponse(response)
 
-    await window.fluxAPI.fs.writeTextFile(filePath, content)
+    await window.lisek.fs.writeTextFile(filePath, content)
   }, [response])
 
   return (
@@ -542,8 +609,21 @@ export default memo(function ResponsePanel() {
 
   if (!response) {
     return (
-      <Box sx={{ p: 1.5, textAlign: 'center' }}>
-        <Typography sx={COMPACT.caption}>Send a request to see the response</Typography>
+      <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <Box
+          sx={{
+            px: 1.5,
+            py: 1,
+            borderBottom: 1,
+            borderColor: 'divider',
+            flexShrink: 0
+          }}
+        >
+          <Typography variant="subtitle2" sx={{ fontWeight: 700, fontSize: 13 }}>
+            Response
+          </Typography>
+        </Box>
+        <ResponseEmptyState />
       </Box>
     )
   }
@@ -567,6 +647,9 @@ export default memo(function ResponsePanel() {
           ...COMPACT.bar
         }}
       >
+        <Typography variant="subtitle2" sx={{ fontWeight: 700, fontSize: 13, mr: 0.5, flexShrink: 0 }}>
+          Response
+        </Typography>
         <Tooltip title={`${response.statusCode} ${response.statusText}`}>
           <Chip
             label={response.statusCode}

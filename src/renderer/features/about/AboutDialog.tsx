@@ -26,12 +26,12 @@ export default function AboutDialog({ open, onClose }: Props) {
 
   useEffect(() => {
     if (open) {
-      window.fluxAPI.app.getInfo().then(setInfo)
+      window.lisek.app.getInfo().then(setInfo)
     }
   }, [open])
 
   const openLink = (url: string) => {
-    void window.fluxAPI.shell.openExternal(url)
+    void window.lisek.shell.openExternal(url)
   }
 
   return (
@@ -41,11 +41,11 @@ export default function AboutDialog({ open, onClose }: Props) {
           <Box
             component="img"
             src={APP_LOGO}
-            alt="FluxAPI"
+            alt="Lisek"
             sx={{ width: 64, height: 64, display: 'block' }}
           />
           <Typography variant="h6" fontWeight={700}>
-            {info?.name ?? 'FluxAPI'}
+            {info?.name ?? 'Lisek'}
           </Typography>
           {info && (
             <Chip label={`v${info.version}`} size="small" color="primary" variant="outlined" />

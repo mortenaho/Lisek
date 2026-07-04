@@ -25,7 +25,7 @@ export default function WebSocketTab() {
   const [message, setMessage] = useState('')
 
   useEffect(() => {
-    const unsub = window.fluxAPI.ws.onMessage((_, msg) => {
+    const unsub = window.lisek.ws.onMessage((_, msg) => {
       useAppStore.setState((s) => ({ wsMessages: [...s.wsMessages, msg] }))
     })
     return unsub
@@ -35,13 +35,13 @@ export default function WebSocketTab() {
     flush()
     const req = useAppStore.getState().activeRequest
     if (!req) return
-    const id = await window.fluxAPI.ws.connect(req.wsUrl || req.url, req.headers)
+    const id = await window.lisek.ws.connect(req.wsUrl || req.url, req.headers)
     useAppStore.setState({ wsConnectionId: id, wsMessages: [] })
   }
 
   const send = async () => {
     if (wsConnectionId && message) {
-      await window.fluxAPI.ws.send(wsConnectionId, message)
+      await window.lisek.ws.send(wsConnectionId, message)
       useAppStore.setState((s) => ({
         wsMessages: [
           ...s.wsMessages,
@@ -54,7 +54,7 @@ export default function WebSocketTab() {
 
   const disconnect = async () => {
     if (wsConnectionId) {
-      await window.fluxAPI.ws.disconnect(wsConnectionId)
+      await window.lisek.ws.disconnect(wsConnectionId)
       useAppStore.setState({ wsConnectionId: null })
     }
   }

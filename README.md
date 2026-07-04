@@ -1,10 +1,10 @@
-# FluxAPI
+# Lisek
 
 Offline desktop API client for **HTTP**, **GraphQL**, **WebSocket**, and **gRPC**. Built with Electron, React, MUI, and SQLite — no cloud account required.
 
-**Website:** [mortenaho.github.io/fluxapi](https://mortenaho.github.io/fluxapi) (GitHub Pages)
+**Website:** [mortenaho.github.io/Lisek](https://mortenaho.github.io/Lisek) (GitHub Pages)
 
-**Download (Windows):** [FluxAPI-Setup.exe](https://github.com/mortenaho/fluxapi/releases/latest/download/FluxAPI-Setup.exe)
+**Download (Windows):** [Lisek-Setup.exe](https://github.com/mortenaho/Lisek/releases/latest/download/Lisek-Setup.exe)
 
 ## Screenshots
 
@@ -202,13 +202,13 @@ npm run icons      # regenerate app icons
 
 ## Build Windows Installer
 
-Close any running FluxAPI/Electron instance first, then:
+Close any running Lisek/Electron instance first, then:
 
 ```bash
 npm run dist
 ```
 
-Output: `dist-installer/FluxAPI Setup 1.1.0.exe`
+Output: `dist-installer/Lisek Setup 1.1.0.exe`
 
 The build writes to a temp directory and copies the installer into `dist-installer/` via `scripts/post-dist.mjs`.
 
@@ -218,13 +218,13 @@ The build writes to a temp directory and copies the installer into `dist-install
 
 Static HTML site in [`docs/`](docs/index.html) — no build step.
 
-Site URL: **https://mortenaho.github.io/fluxapi/**
+Site URL: **https://mortenaho.github.io/Lisek/**
 
 ### Enable (one time)
 
 GitHub Pages is **not enabled until you do this once**:
 
-1. Open **[Settings → Pages](https://github.com/mortenaho/fluxapi/settings/pages)**
+1. Open **[Settings → Pages](https://github.com/mortenaho/Lisek/settings/pages)**
 2. **Build and deployment → Source:** `Deploy from a branch`
 3. **Branch:** `main` · **Folder:** `/docs`
 4. Click **Save**
@@ -248,7 +248,7 @@ git tag v1.1.0
 git push origin v1.1.0
 ```
 
-The [Release](.github/workflows/release.yml) workflow runs `npm run dist` on Windows and uploads `FluxAPI Setup *.exe` to GitHub Releases.
+The [Release](.github/workflows/release.yml) workflow runs `npm run dist` on Windows and uploads `Lisek Setup *.exe` to GitHub Releases.
 
 ---
 
@@ -257,7 +257,7 @@ The [Release](.github/workflows/release.yml) workflow runs `npm run dist` on Win
 All data is stored locally in a SQLite database:
 
 ```
-%APPDATA%/FluxAPI/fluxapi.db
+%APPDATA%/Lisek/lisek.db
 ```
 
 Stored data includes collections, requests, environments, history, imported proto files, OpenAPI specs, settings, and the cookie jar.

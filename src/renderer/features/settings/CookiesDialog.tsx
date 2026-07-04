@@ -29,7 +29,7 @@ export default function CookiesDialog({ open, onClose }: Props) {
   const [confirmClear, setConfirmClear] = useState(false)
 
   const load = useCallback(async () => {
-    const list = await window.fluxAPI.cookies.list()
+    const list = await window.lisek.cookies.list()
     setCookies(list)
   }, [])
 
@@ -48,12 +48,12 @@ export default function CookiesDialog({ open, onClose }: Props) {
   }, [cookies])
 
   const clearDomain = async (domain: string) => {
-    await window.fluxAPI.cookies.clearDomain(domain)
+    await window.lisek.cookies.clearDomain(domain)
     await load()
   }
 
   const clearAll = async () => {
-    await window.fluxAPI.cookies.clearAll()
+    await window.lisek.cookies.clearAll()
     setConfirmClear(false)
     await load()
   }

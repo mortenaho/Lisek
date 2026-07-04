@@ -82,16 +82,16 @@ export default function ImportDialog() {
   const importFromFile = async (format: ImportFormat) => {
     setError(null)
     const meta = FORMAT_META[format]
-    const path = await window.fluxAPI.dialog.openFile([
+    const path = await window.lisek.dialog.openFile([
       { name: meta.title, extensions: meta.extensions }
     ])
     if (!path) return
 
     setLoading(true)
     try {
-      if (format === 'postman') await window.fluxAPI.import.postman(path)
-      else if (format === 'openapi') await window.fluxAPI.import.openapi(path)
-      else await window.fluxAPI.import.insomnia(path)
+      if (format === 'postman') await window.lisek.import.postman(path)
+      else if (format === 'openapi') await window.lisek.import.openapi(path)
+      else await window.lisek.import.insomnia(path)
       await refreshAfterCollectionImport(format)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Import failed')
@@ -110,9 +110,9 @@ export default function ImportDialog() {
     setError(null)
     setLoading(true)
     try {
-      if (format === 'postman') await window.fluxAPI.import.postmanFromUrl(url)
-      else if (format === 'openapi') await window.fluxAPI.import.openapiFromUrl(url)
-      else await window.fluxAPI.import.insomniaFromUrl(url)
+      if (format === 'postman') await window.lisek.import.postmanFromUrl(url)
+      else if (format === 'openapi') await window.lisek.import.openapiFromUrl(url)
+      else await window.lisek.import.insomniaFromUrl(url)
       await refreshAfterCollectionImport(format)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Import failed')
@@ -126,7 +126,7 @@ export default function ImportDialog() {
     setLoading(true)
     setError(null)
     try {
-      const req = await window.fluxAPI.import.curl(curlPaste)
+      const req = await window.lisek.import.curl(curlPaste)
       await selectRequest(req)
       await loadRequests()
       handleClose()

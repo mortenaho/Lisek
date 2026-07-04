@@ -4,7 +4,7 @@ import packageJson from '../package.json'
 
 describe('Application metadata', () => {
   it('APP_INFO — has required fields', () => {
-    expect(APP_INFO.name).toBe('FluxAPI')
+    expect(APP_INFO.name).toBe('Lisek')
     expect(APP_INFO.author).toBe('Seyed Morteza Hosseini')
     expect(APP_INFO.email).toBe('mortenaho@gmail.com')
     expect(APP_INFO.website).toBe('https://mortenaho.ir')

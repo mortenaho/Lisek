@@ -102,9 +102,24 @@ const SendButton = memo(function SendButton({
       variant="contained"
       color="primary"
       size="small"
-      startIcon={<SendIcon sx={COMPACT.icon} />}
+      startIcon={<SendIcon sx={{ fontSize: 16 }} />}
       onClick={onSend}
-      sx={COMPACT.btnSmall}
+      sx={{
+        px: 2,
+        py: 0.625,
+        fontSize: 12,
+        fontWeight: 600,
+        textTransform: 'none',
+        borderRadius: 1.5,
+        boxShadow: 'none',
+        flexShrink: 0,
+        '&:hover': {
+          boxShadow: (t) =>
+            t.palette.mode === 'dark'
+              ? '0 2px 12px rgba(192, 132, 252, 0.35)'
+              : '0 2px 8px rgba(86, 0, 114, 0.25)'
+        }
+      }}
     >
       Send
     </Button>
@@ -153,7 +168,7 @@ function RequestBuilderForm({
 
   const handleCancel = useCallback(async () => {
     const id = useAppStore.getState().activeRequest?.id
-    if (id) await window.fluxAPI.request.cancel(id)
+    if (id) await window.lisek.request.cancel(id)
     useAppStore.setState({ loading: false })
   }, [])
 
@@ -213,15 +228,15 @@ function RequestBuilderForm({
   const bodyLanguage = languageForContentType(request.bodyRawContentType)
 
   return (
-    <Box sx={{ p: 0.5 }} onKeyDown={handleKeyDown}>
+    <Box sx={{ p: 1, height: '100%', display: 'flex', flexDirection: 'column' }} onKeyDown={handleKeyDown}>
       <Box
         sx={{
           display: 'flex',
-          gap: 0.5,
-          mb: 0.5,
+          gap: 0.75,
+          mb: 1,
           alignItems: 'center',
-          flexWrap: 'wrap',
-          ...COMPACT.bar
+          flexWrap: 'nowrap',
+          flexShrink: 0
         }}
       >
         <Select
@@ -323,7 +338,7 @@ function RequestBuilderForm({
         {protocolTabLabel && <Tab value="protocol" label={protocolTabLabel} />}
       </Tabs>
 
-      <RequestTabPanel>
+      <RequestTabPanel sx={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
         {section === 'params' && (
           <KeyValueEditor
             items={request.params}

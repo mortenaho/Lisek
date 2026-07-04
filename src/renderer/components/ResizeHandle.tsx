@@ -8,8 +8,10 @@ interface Props {
   getSize: () => number
   onLiveResize: (size: number) => void
   onCommit: (size: number) => void
-  /** When true, moving pointer down increases size (response panel). */
+  /** When true, moving pointer down increases size (bottom panel). */
   growOnDown?: boolean
+  /** When true, moving pointer right decreases size (panel sits to the right of the handle). */
+  invert?: boolean
   onDragStart?: () => void
   onDragEnd?: () => void
 }
@@ -26,6 +28,7 @@ export default function ResizeHandle({
   onLiveResize,
   onCommit,
   growOnDown = false,
+  invert = false,
   onDragStart,
   onDragEnd
 }: Props) {
@@ -64,7 +67,13 @@ export default function ResizeHandle({
       const onMouseMove = (ev: MouseEvent) => {
         const current = isX ? ev.clientX : ev.clientY
         const delta = current - startPos
-        const signed = isX ? delta : growOnDown ? delta : -delta
+        const signed = isX
+          ? invert
+            ? -delta
+            : delta
+          : growOnDown
+            ? delta
+            : -delta
         latest = clamp(startSize + signed, min, max)
         schedule(latest)
       }
@@ -91,7 +100,7 @@ export default function ResizeHandle({
       window.addEventListener('mousemove', onMouseMove)
       window.addEventListener('mouseup', onMouseUp)
     },
-    [isX, growOnDown, getSize, min, max, schedule, onLiveResize, onCommit, onDragStart, onDragEnd]
+    [isX, growOnDown, invert, getSize, min, max, schedule, onLiveResize, onCommit, onDragStart, onDragEnd]
   )
 
   return (
