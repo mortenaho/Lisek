@@ -3,13 +3,17 @@ import { join } from 'path'
 import { copyFileSync, existsSync } from 'fs'
 import { initDatabase } from './db'
 import { registerIpcHandlers } from './ipc'
-import { seedFreshInstall } from './services/repository'
+import { seedFreshInstall, seedScreenshotDemo } from './services/repository'
 import { configureCookieJar } from './services/cookie-jar.service'
 import { APP_INFO } from '../../shared/appInfo'
 
 let mainWindow: BrowserWindow | null = null
 
 const isDev = !app.isPackaged
+
+if (process.env.LISEK_USER_DATA) {
+  app.setPath('userData', process.env.LISEK_USER_DATA)
+}
 
 if (process.platform === 'win32') {
   app.setAppUserModelId('com.lisek.app')
@@ -114,7 +118,9 @@ function createWindow(): void {
 
   if (isDev && process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
-    mainWindow.webContents.openDevTools({ mode: 'detach' })
+    if (process.env.LISEK_NO_DEVTOOLS !== '1') {
+      mainWindow.webContents.openDevTools({ mode: 'detach' })
+    }
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
@@ -129,7 +135,9 @@ app.whenReady().then(async () => {
   const dbPath = resolveDbPath()
   configureCookieJar(resolveCookieJarPath())
   const { isNew } = await initDatabase(dbPath)
-  if (isNew) {
+  if (process.env.LISEK_SCREENSHOT_SEED === '1') {
+    seedScreenshotDemo()
+  } else if (isNew) {
     seedFreshInstall()
   }
   registerIpcHandlers(() => mainWindow)

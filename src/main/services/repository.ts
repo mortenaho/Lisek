@@ -489,6 +489,93 @@ export function seedFreshInstall() {
   createCollection({ name: 'My Collection' })
 }
 
+function demoResponse(
+  statusCode: number,
+  statusText: string,
+  body: unknown,
+  durationMs: number
+): HttpResponse {
+  const text = typeof body === 'string' ? body : JSON.stringify(body, null, 2)
+  return {
+    statusCode,
+    statusText,
+    headers: { 'content-type': 'application/json; charset=utf-8' },
+    body: text,
+    durationMs,
+    sizeBytes: new TextEncoder().encode(text).length,
+    cookies: []
+  }
+}
+
+/** Rich demo data for automated marketing screenshots (see tests/e2e/screenshots.spec.mjs). */
+export function seedScreenshotDemo() {
+  runQuery('DELETE FROM history')
+  runQuery('DELETE FROM requests')
+  runQuery('DELETE FROM collections')
+  runQuery('DELETE FROM environments')
+
+  saveEnvironment({
+    name: 'Local Dev',
+    isActive: false,
+    variables: [
+      { id: uuidv4(), key: 'baseUrl', value: 'http://localhost:8080', enabled: true },
+      { id: uuidv4(), key: 'apiKey', value: 'dev-key', enabled: true }
+    ]
+  })
+
+  const env = saveEnvironment({
+    name: 'Production',
+    isActive: true,
+    variables: [
+      { id: uuidv4(), key: 'baseUrl', value: 'https://jsonplaceholder.typicode.com', enabled: true },
+      { id: uuidv4(), key: 'userId', value: '1', enabled: true }
+    ]
+  })
+  setActiveEnvironment(env.id)
+
+  const collection = createCollection({ name: 'Demo API' })
+
+  const getUsers = saveRequest({
+    collectionId: collection.id,
+    name: 'Get Users',
+    method: 'GET',
+    url: '{{baseUrl}}/users',
+    sortOrder: 0
+  })
+
+  const getUsersResponse = demoResponse(200, 'OK', [
+    { id: 1, name: 'Alice Chen', email: 'alice@example.com' },
+    { id: 2, name: 'Bob Smith', email: 'bob@example.com' },
+    { id: 3, name: 'Carol Jones', email: 'carol@example.com' }
+  ], 142)
+  saveRequestLastResponse(getUsers.id, getUsersResponse)
+  addHistory(getUsers, getUsersResponse, getUsers.id)
+
+  const deleteUser = saveRequest({
+    collectionId: collection.id,
+    name: 'Delete User',
+    method: 'DELETE',
+    url: '{{baseUrl}}/users/{{userId}}',
+    params: [{ id: uuidv4(), key: 'force', value: 'true', enabled: true }],
+    sortOrder: 1
+  })
+
+  const deleteResponse = demoResponse(200, 'OK', {}, 98)
+  saveRequestLastResponse(deleteUser.id, deleteResponse)
+  addHistory(deleteUser, deleteResponse, deleteUser.id)
+
+  saveRequest({
+    collectionId: collection.id,
+    name: 'Create Post',
+    method: 'POST',
+    url: '{{baseUrl}}/posts',
+    bodyType: 'raw',
+    bodyRaw: '{\n  "title": "Hello",\n  "body": "World",\n  "userId": 1\n}',
+    bodyRawContentType: 'application/json',
+    sortOrder: 2
+  })
+}
+
 export function createEmptyRequest(collectionId: string | null = null): RequestModel {
   const now = Date.now()
   return {
