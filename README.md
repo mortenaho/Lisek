@@ -208,25 +208,26 @@ The build writes to a temp directory and copies the installer into `dist-install
 
 ## GitHub Pages
 
-The project website lives in [`docs/`](docs/index.html).
+Static HTML site in [`docs/`](docs/index.html) — no build step.
 
 Site URL: **https://mortenaho.github.io/fluxapi/**
 
-### One-time setup (pick one)
+### Enable (one time)
 
-**Option A — fastest (recommended):**
+GitHub Pages is **not enabled until you do this once**:
 
-1. Open [Settings → Pages](https://github.com/mortenaho/fluxapi/settings/pages)
-2. **Source:** Deploy from a branch
+1. Open **[Settings → Pages](https://github.com/mortenaho/fluxapi/settings/pages)**
+2. **Build and deployment → Source:** `Deploy from a branch`
 3. **Branch:** `main` · **Folder:** `/docs`
-4. Save — the site is live within ~1 minute
+4. Click **Save**
 
-**Option B — via Actions:**
+The site is live after ~1 minute.
 
-1. Open [Settings → Pages](https://github.com/mortenaho/fluxapi/settings/pages)
-2. **Source:** Deploy from a branch
-3. **Branch:** `gh-pages` · **Folder:** `/ (root)`
-4. Run the [Deploy GitHub Pages](.github/workflows/pages.yml) workflow (or push to `main`)
+Or from PowerShell (after `gh auth login`):
+
+```powershell
+.\scripts\enable-github-pages.ps1
+```
 
 ---
 
