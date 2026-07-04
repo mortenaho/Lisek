@@ -1,5 +1,6 @@
 import { TextField, Box } from '@mui/material'
 import { useTheme } from '@mui/material/styles'
+import { DARK_EDITOR_BG } from '../theme/appTheme'
 import Editor from '@monaco-editor/react'
 import { memo, useCallback } from 'react'
 
@@ -61,7 +62,7 @@ function CodeEditor({
         borderColor: 'divider',
         borderRadius: 1,
         overflow: 'hidden',
-        bgcolor: theme.palette.mode === 'dark' ? '#1e1e1e' : 'background.paper'
+        bgcolor: theme.palette.mode === 'dark' ? DARK_EDITOR_BG : 'background.paper'
       }}
     >
       <Editor

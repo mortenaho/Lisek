@@ -189,7 +189,7 @@ export default function MainLayout() {
           onCommit={commitSidebarWidth}
         />
 
-        <Box component="main" sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
+        <Box component="main" sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden', bgcolor: 'background.default' }}>
           <Box sx={{ flex: 1, overflow: 'auto', minHeight: 0, contain: 'layout style' }} data-resize-panel>
             <MemoRequestBuilder />
           </Box>
