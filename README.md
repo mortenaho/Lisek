@@ -208,13 +208,25 @@ The build writes to a temp directory and copies the installer into `dist-install
 
 ## GitHub Pages
 
-The project website lives in [`docs/`](docs/index.html) and is deployed automatically via GitHub Actions.
-
-1. Open **Settings → Pages**
-2. Set **Source** to **GitHub Actions**
-3. Push to `main` — the [Deploy GitHub Pages](.github/workflows/pages.yml) workflow publishes `docs/`
+The project website lives in [`docs/`](docs/index.html).
 
 Site URL: **https://mortenaho.github.io/fluxapi/**
+
+### One-time setup (pick one)
+
+**Option A — fastest (recommended):**
+
+1. Open [Settings → Pages](https://github.com/mortenaho/fluxapi/settings/pages)
+2. **Source:** Deploy from a branch
+3. **Branch:** `main` · **Folder:** `/docs`
+4. Save — the site is live within ~1 minute
+
+**Option B — via Actions:**
+
+1. Open [Settings → Pages](https://github.com/mortenaho/fluxapi/settings/pages)
+2. **Source:** Deploy from a branch
+3. **Branch:** `gh-pages` · **Folder:** `/ (root)`
+4. Run the [Deploy GitHub Pages](.github/workflows/pages.yml) workflow (or push to `main`)
 
 ---
 
