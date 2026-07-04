@@ -1,4 +1,4 @@
-# Enable GitHub Pages for this repo (main branch, /docs folder).
+# Enable GitHub Pages via GitHub Actions (recommended).
 # Requires: gh auth login
 # Run: .\scripts\enable-github-pages.ps1
 
@@ -14,12 +14,20 @@ if ($LASTEXITCODE -ne 0) {
   gh auth login
 }
 
-Write-Host 'Enabling GitHub Pages (main /docs)...'
-gh api repos/mortenaho/Lisek/pages -X POST `
-  -f build_type=legacy `
-  -f 'source[branch]=main' `
-  -f 'source[path]=/docs'
+Write-Host 'Enabling GitHub Pages (GitHub Actions)...'
+
+$existing = gh api repos/mortenaho/Lisek/pages 2>$null
+if ($LASTEXITCODE -eq 0) {
+  gh api repos/mortenaho/Lisek/pages -X PUT -f build_type=workflow | Out-Null
+} else {
+  gh api repos/mortenaho/Lisek/pages -X POST -f build_type=workflow | Out-Null
+}
+
+Write-Host 'Triggering deploy workflow...'
+gh workflow run pages.yml --ref main
 
 Write-Host ''
 Write-Host 'Done. Site URL (wait 1-2 min):'
 Write-Host '  https://mortenaho.github.io/Lisek/'
+Write-Host ''
+Write-Host 'If deploy still fails, open Settings -> Pages and set Source to GitHub Actions.'

@@ -222,20 +222,21 @@ Site URL: **https://mortenaho.github.io/Lisek/**
 
 ### Enable (one time)
 
-GitHub Pages is **not enabled until you do this once**:
+GitHub Pages deploys from [`docs/`](docs/index.html) via **GitHub Actions** (workflow: [`.github/workflows/pages.yml`](.github/workflows/pages.yml)).
 
 1. Open **[Settings → Pages](https://github.com/mortenaho/Lisek/settings/pages)**
-2. **Build and deployment → Source:** `Deploy from a branch`
-3. **Branch:** `main` · **Folder:** `/docs`
-4. Click **Save**
+2. **Build and deployment → Source:** `GitHub Actions`
+3. Push to `main` (or run **Actions → Deploy GitHub Pages → Run workflow**)
 
-The site is live after ~1 minute.
+The site is live after ~1 minute at **https://mortenaho.github.io/Lisek/**
 
 Or from PowerShell (after `gh auth login`):
 
 ```powershell
 .\scripts\enable-github-pages.ps1
 ```
+
+If you see *“Deployment failed, try again later”* with **Deploy from a branch**, switch the source to **GitHub Actions** (step 2 above) instead of `main /docs`.
 
 ---
 
