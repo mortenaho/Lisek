@@ -15,6 +15,7 @@ import { memo, useCallback, useMemo } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 import type { KeyValue } from '@shared/types'
 import { COMPACT } from '../theme/compact'
+import { applyControlledInputChange } from '../utils/inputSelection'
 
 interface Props {
   items: KeyValue[]
@@ -76,12 +77,16 @@ const KeyValueRow = memo(function KeyValueRow({
         />
       </Tooltip>
 
-      <TextField
-        size="small"
-        fullWidth
-        placeholder={keyPlaceholder}
-        value={item.key}
-        onChange={(e) => onFieldChange(index, 'key', e.target.value)}
+        <TextField
+          size="small"
+          fullWidth
+          placeholder={keyPlaceholder}
+          value={item.key}
+          onChange={(e) => {
+            applyControlledInputChange(e.target, item.key, e.target.value, (v) =>
+              onFieldChange(index, 'key', v)
+            )
+          }}
         sx={COMPACT.input}
         slotProps={{
           input: { sx: COMPACT.monoInput }
@@ -104,7 +109,11 @@ const KeyValueRow = memo(function KeyValueRow({
           fullWidth
           placeholder={valuePlaceholder}
           value={item.value}
-          onChange={(e) => onFieldChange(index, 'value', e.target.value)}
+          onChange={(e) => {
+            applyControlledInputChange(e.target, item.value, e.target.value, (v) =>
+              onFieldChange(index, 'value', v)
+            )
+          }}
           sx={COMPACT.input}
           slotProps={{
             input: { sx: COMPACT.monoInput }

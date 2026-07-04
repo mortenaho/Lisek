@@ -19,6 +19,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { useEffect, useState } from 'react'
 import type { CollectionModel, KeyValue } from '@shared/types'
 import { useAppStore } from '../../stores/appStore'
+import { applyControlledInputChange } from '../../utils/inputSelection'
 
 interface Props {
   open: boolean
@@ -74,14 +75,20 @@ export default function CollectionVariablesDialog({ open, collection, onClose }:
                 size="small"
                 placeholder="Variable"
                 value={v.key}
-                onChange={(e) => updateVar(i, 'key', e.target.value)}
+                onChange={(e) =>
+                  applyControlledInputChange(e.target, v.key, e.target.value, (val) => updateVar(i, 'key', val))
+                }
                 sx={{ flex: 1 }}
               />
               <TextField
                 size="small"
                 placeholder="Value"
                 value={v.value}
-                onChange={(e) => updateVar(i, 'value', e.target.value)}
+                onChange={(e) =>
+                  applyControlledInputChange(e.target, v.value, e.target.value, (val) =>
+                    updateVar(i, 'value', val)
+                  )
+                }
                 sx={{ flex: 1.5 }}
               />
               <IconButton size="small" onClick={() => removeVar(i)}>

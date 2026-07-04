@@ -41,6 +41,7 @@ import {
   serializeFullResponse
 } from '../../utils/formatResponse'
 import { COMPACT, formatBytes } from '../../theme/compact'
+import { applyControlledInputChange } from '../../utils/inputSelection'
 
 export type ResponseBodyViewHandle = {
   openFind: () => void
@@ -294,7 +295,9 @@ const JsonQueryPanel = memo(function JsonQueryPanel({
           inputRef={inputRef}
           placeholder="JSONPath — e.g. $.data.items[0].name"
           value={jsonQuery}
-          onChange={(e) => setJsonQuery(e.target.value)}
+          onChange={(e) =>
+            applyControlledInputChange(e.target, jsonQuery, e.target.value, setJsonQuery)
+          }
           onKeyDown={(e) => {
             if (e.key === 'Enter') runQuery()
             if (e.key === 'Escape') onClose()

@@ -22,7 +22,7 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import CloseIcon from '@mui/icons-material/Close'
 import DriveFileRenameOutlineIcon from '@mui/icons-material/DriveFileRenameOutline'
 import { v4 as uuidv4 } from 'uuid'
-import { useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { KeyValue } from '@shared/types'
 import { useAppStore } from '../../stores/appStore'
 import ConfirmDialog from '../../components/ConfirmDialog'
@@ -39,6 +39,80 @@ export default function EnvironmentsDialog({ open, onClose }: Props) {
   const [editingName, setEditingName] = useState(false)
   const [nameDraft, setNameDraft] = useState('')
   const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [variables, setVariables] = useState<KeyValue[]>([])
+  const variablesRef = useRef(variables)
+  const persistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  variablesRef.current = variables
+
+  useEffect(() => {
+    if (!open) return
+    setVariables(activeEnv?.variables.map((v) => ({ ...v })) ?? [])
+  }, [open, activeEnv?.id])
+
+  const persistVariables = useCallback(
+    async (vars: KeyValue[]) => {
+      const env = useAppStore.getState().environments.find((e) => e.isActive)
+      if (!env) return
+      await window.fluxAPI.environments.save({ ...env, variables: vars })
+      await loadEnvironments()
+    },
+    [loadEnvironments]
+  )
+
+  const schedulePersist = useCallback(
+    (vars: KeyValue[]) => {
+      if (persistTimerRef.current) clearTimeout(persistTimerRef.current)
+      persistTimerRef.current = setTimeout(() => {
+        persistTimerRef.current = null
+        void persistVariables(vars)
+      }, 400)
+    },
+    [persistVariables]
+  )
+
+  const flushPersist = useCallback(async () => {
+    if (persistTimerRef.current) {
+      clearTimeout(persistTimerRef.current)
+      persistTimerRef.current = null
+    }
+    if (!activeEnv) return
+    await persistVariables(variablesRef.current)
+  }, [activeEnv, persistVariables])
+
+  useEffect(
+    () => () => {
+      if (persistTimerRef.current) clearTimeout(persistTimerRef.current)
+    },
+    []
+  )
+
+  const handleClose = () => {
+    void flushPersist().finally(onClose)
+  }
+
+  const updateVar = (index: number, field: 'key' | 'value', value: string) => {
+    setVariables((vars) => {
+      const next = vars.map((row, i) => (i === index ? { ...row, [field]: value } : row))
+      schedulePersist(next)
+      return next
+    })
+  }
+
+  const addVar = () => {
+    setVariables((vars) => {
+      const next = [...vars, { id: uuidv4(), key: '', value: '', enabled: true }]
+      schedulePersist(next)
+      return next
+    })
+  }
+
+  const removeVar = (index: number) => {
+    setVariables((vars) => {
+      const next = vars.filter((_, i) => i !== index)
+      schedulePersist(next)
+      return next
+    })
+  }
 
   const createEnv = async () => {
     await window.fluxAPI.environments.save({ name: 'New Environment', variables: [], isActive: false })
@@ -72,28 +146,6 @@ export default function EnvironmentsDialog({ open, onClose }: Props) {
     setDeleteId(null)
   }
 
-  const updateVar = async (index: number, field: 'key' | 'value', value: string) => {
-    if (!activeEnv) return
-    const vars = [...activeEnv.variables]
-    vars[index] = { ...vars[index], [field]: value }
-    await window.fluxAPI.environments.save({ ...activeEnv, variables: vars })
-    await loadEnvironments()
-  }
-
-  const addVar = async () => {
-    if (!activeEnv) return
-    const vars = [...activeEnv.variables, { id: uuidv4(), key: '', value: '', enabled: true }]
-    await window.fluxAPI.environments.save({ ...activeEnv, variables: vars })
-    await loadEnvironments()
-  }
-
-  const removeVar = async (index: number) => {
-    if (!activeEnv) return
-    const vars = activeEnv.variables.filter((_: KeyValue, i: number) => i !== index)
-    await window.fluxAPI.environments.save({ ...activeEnv, variables: vars })
-    await loadEnvironments()
-  }
-
   const startRename = () => {
     if (!activeEnv) return
     setNameDraft(activeEnv.name)
@@ -102,12 +154,12 @@ export default function EnvironmentsDialog({ open, onClose }: Props) {
 
   return (
     <>
-      <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
         <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1 }}>
           <Typography variant="h6" fontWeight={600}>
             Environments
           </Typography>
-          <IconButton size="small" onClick={onClose}>
+          <IconButton size="small" onClick={handleClose}>
             <CloseIcon />
           </IconButton>
         </DialogTitle>
@@ -178,7 +230,7 @@ export default function EnvironmentsDialog({ open, onClose }: Props) {
               </Typography>
 
               <List dense disablePadding>
-                {activeEnv.variables.map((v: KeyValue, i: number) => (
+                {variables.map((v, i) => (
                   <ListItem key={v.id} disableGutters sx={{ gap: 1, py: 0.5 }}>
                     <TextField
                       size="small"
@@ -245,7 +297,7 @@ export default function EnvironmentsDialog({ open, onClose }: Props) {
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={onClose}>Close</Button>
+          <Button onClick={handleClose}>Close</Button>
         </DialogActions>
       </Dialog>
 

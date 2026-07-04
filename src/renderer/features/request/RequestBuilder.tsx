@@ -35,6 +35,7 @@ import ScriptsTab from './ScriptsTab'
 import ConfirmDialog from '../../components/ConfirmDialog'
 import VariableInput from '../../components/VariableInput'
 import { COMPACT } from '../../theme/compact'
+import { applyControlledInputChange } from '../../utils/inputSelection'
 import type { BodyType, HttpMethod, KeyValue, Protocol } from '@shared/types'
 
 const METHOD_COLORS: Record<HttpMethod, string> = {
@@ -264,7 +265,9 @@ function RequestBuilderForm({
             fullWidth
             placeholder="ws://localhost:8080"
             value={request.wsUrl}
-            onChange={(e) => patch({ wsUrl: e.target.value })}
+            onChange={(e) =>
+              applyControlledInputChange(e.target, request.wsUrl, e.target.value, (v) => patch({ wsUrl: v }))
+            }
             sx={COMPACT.input}
           />
         ) : (
@@ -273,7 +276,11 @@ function RequestBuilderForm({
             fullWidth
             placeholder="localhost:50051"
             value={request.grpcTarget}
-            onChange={(e) => patch({ grpcTarget: e.target.value })}
+            onChange={(e) =>
+              applyControlledInputChange(e.target, request.grpcTarget, e.target.value, (v) =>
+                patch({ grpcTarget: v })
+              )
+            }
             sx={COMPACT.input}
           />
         )}

@@ -25,6 +25,7 @@ import {
   resolveVariable,
   type VariableSegment
 } from '../utils/variables'
+import { applyControlledInputChange } from '../utils/inputSelection'
 
 const EMPTY_VARS: KeyValue[] = []
 
@@ -307,7 +308,7 @@ function VariableInput({
           value={value}
           placeholder=""
           onChange={(e) => {
-            onChange(e.target.value)
+            applyControlledInputChange(e.target, value, e.target.value, onChange)
             requestAnimationFrame(refreshAutocomplete)
           }}
           onFocus={() => setFocused(true)}

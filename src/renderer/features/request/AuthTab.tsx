@@ -13,6 +13,7 @@ import {
 } from '@mui/material'
 import { useRequestEditor } from '../../contexts/RequestEditorContext'
 import { COMPACT } from '../../theme/compact'
+import { applyControlledInputChange } from '../../utils/inputSelection'
 import type { AuthType, OAuthGrantType } from '@shared/types'
 
 const AUTH_OPTIONS: { value: AuthType; label: string; hint: string }[] = [
@@ -82,7 +83,11 @@ export default function AuthTab() {
                 label="Bearer Token"
                 placeholder="eyJhbGciOiJIUzI1NiIs..."
                 value={auth.bearerToken || ''}
-                onChange={(e) => setAuth({ bearerToken: e.target.value })}
+                onChange={(e) =>
+                  applyControlledInputChange(e.target, auth.bearerToken || '', e.target.value, (v) =>
+                    setAuth({ bearerToken: v })
+                  )
+                }
                 sx={COMPACT.input}
                 slotProps={{
                   input: { sx: COMPACT.monoInput },
@@ -105,7 +110,11 @@ export default function AuthTab() {
                   size="small"
                   label="Username"
                   value={auth.basicUsername || ''}
-                  onChange={(e) => setAuth({ basicUsername: e.target.value })}
+                  onChange={(e) =>
+                    applyControlledInputChange(e.target, auth.basicUsername || '', e.target.value, (v) =>
+                      setAuth({ basicUsername: v })
+                    )
+                  }
                   sx={COMPACT.input}
                   slotProps={{ inputLabel: { sx: { fontSize: 11 } } }}
                 />
@@ -115,7 +124,11 @@ export default function AuthTab() {
                   label="Password"
                   type="password"
                   value={auth.basicPassword || ''}
-                  onChange={(e) => setAuth({ basicPassword: e.target.value })}
+                  onChange={(e) =>
+                    applyControlledInputChange(e.target, auth.basicPassword || '', e.target.value, (v) =>
+                      setAuth({ basicPassword: v })
+                    )
+                  }
                   sx={COMPACT.input}
                   slotProps={{ inputLabel: { sx: { fontSize: 11 } } }}
                 />
@@ -137,7 +150,11 @@ export default function AuthTab() {
                   label="Key name"
                   placeholder="X-API-Key"
                   value={auth.apiKeyKey || ''}
-                  onChange={(e) => setAuth({ apiKeyKey: e.target.value })}
+                  onChange={(e) =>
+                    applyControlledInputChange(e.target, auth.apiKeyKey || '', e.target.value, (v) =>
+                      setAuth({ apiKeyKey: v })
+                    )
+                  }
                   sx={COMPACT.input}
                   slotProps={{ inputLabel: { sx: { fontSize: 11 } } }}
                 />
@@ -146,7 +163,11 @@ export default function AuthTab() {
                   size="small"
                   label="Key value"
                   value={auth.apiKeyValue || ''}
-                  onChange={(e) => setAuth({ apiKeyValue: e.target.value })}
+                  onChange={(e) =>
+                    applyControlledInputChange(e.target, auth.apiKeyValue || '', e.target.value, (v) =>
+                      setAuth({ apiKeyValue: v })
+                    )
+                  }
                   sx={COMPACT.input}
                   slotProps={{
                     input: { sx: COMPACT.monoInput },
@@ -195,7 +216,11 @@ export default function AuthTab() {
                   label="Token URL"
                   placeholder="https://auth.example.com/oauth/token"
                   value={auth.oauthTokenUrl || ''}
-                  onChange={(e) => setAuth({ oauthTokenUrl: e.target.value })}
+                  onChange={(e) =>
+                    applyControlledInputChange(e.target, auth.oauthTokenUrl || '', e.target.value, (v) =>
+                      setAuth({ oauthTokenUrl: v })
+                    )
+                  }
                   sx={COMPACT.input}
                   slotProps={{ inputLabel: { sx: { fontSize: 11 } } }}
                 />
@@ -207,7 +232,11 @@ export default function AuthTab() {
                   size="small"
                   label="Client ID"
                   value={auth.oauthClientId || ''}
-                  onChange={(e) => setAuth({ oauthClientId: e.target.value })}
+                  onChange={(e) =>
+                    applyControlledInputChange(e.target, auth.oauthClientId || '', e.target.value, (v) =>
+                      setAuth({ oauthClientId: v })
+                    )
+                  }
                   sx={COMPACT.input}
                   slotProps={{ inputLabel: { sx: { fontSize: 11 } } }}
                 />
@@ -217,7 +246,11 @@ export default function AuthTab() {
                   label="Client Secret"
                   type="password"
                   value={auth.oauthClientSecret || ''}
-                  onChange={(e) => setAuth({ oauthClientSecret: e.target.value })}
+                  onChange={(e) =>
+                    applyControlledInputChange(e.target, auth.oauthClientSecret || '', e.target.value, (v) =>
+                      setAuth({ oauthClientSecret: v })
+                    )
+                  }
                   sx={COMPACT.input}
                   slotProps={{ inputLabel: { sx: { fontSize: 11 } } }}
                 />
@@ -228,7 +261,11 @@ export default function AuthTab() {
                       size="small"
                       label="Username"
                       value={auth.oauthUsername || ''}
-                      onChange={(e) => setAuth({ oauthUsername: e.target.value })}
+                      onChange={(e) =>
+                        applyControlledInputChange(e.target, auth.oauthUsername || '', e.target.value, (v) =>
+                          setAuth({ oauthUsername: v })
+                        )
+                      }
                       sx={COMPACT.input}
                       slotProps={{ inputLabel: { sx: { fontSize: 11 } } }}
                     />
@@ -238,7 +275,11 @@ export default function AuthTab() {
                       label="Password"
                       type="password"
                       value={auth.oauthPassword || ''}
-                      onChange={(e) => setAuth({ oauthPassword: e.target.value })}
+                      onChange={(e) =>
+                        applyControlledInputChange(e.target, auth.oauthPassword || '', e.target.value, (v) =>
+                          setAuth({ oauthPassword: v })
+                        )
+                      }
                       sx={COMPACT.input}
                       slotProps={{ inputLabel: { sx: { fontSize: 11 } } }}
                     />
@@ -250,7 +291,11 @@ export default function AuthTab() {
                   label="Scope (optional)"
                   placeholder="read write"
                   value={auth.oauthScope || ''}
-                  onChange={(e) => setAuth({ oauthScope: e.target.value })}
+                  onChange={(e) =>
+                    applyControlledInputChange(e.target, auth.oauthScope || '', e.target.value, (v) =>
+                      setAuth({ oauthScope: v })
+                    )
+                  }
                   sx={COMPACT.input}
                   slotProps={{ inputLabel: { sx: { fontSize: 11 } } }}
                 />
@@ -259,7 +304,11 @@ export default function AuthTab() {
                   size="small"
                   label="Access Token override (optional)"
                   value={auth.oauthAccessToken || ''}
-                  onChange={(e) => setAuth({ oauthAccessToken: e.target.value })}
+                  onChange={(e) =>
+                    applyControlledInputChange(e.target, auth.oauthAccessToken || '', e.target.value, (v) =>
+                      setAuth({ oauthAccessToken: v })
+                    )
+                  }
                   helperText="Skip token request and use this token directly"
                   sx={COMPACT.input}
                   slotProps={{
