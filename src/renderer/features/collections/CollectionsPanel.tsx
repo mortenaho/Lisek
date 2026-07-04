@@ -438,6 +438,7 @@ export default function CollectionsPanel() {
         <Button
           size="small"
           variant="outlined"
+          color="primary"
           fullWidth
           startIcon={<AddIcon />}
           onClick={() => setNewCollectionOpen(true)}

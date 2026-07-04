@@ -66,8 +66,14 @@ function TabLabel({ label, count }: { label: string; count?: number }) {
         <Chip
           label={count}
           size="small"
-          color="primary"
-          sx={{ height: 16, minWidth: 16, fontSize: 9, '& .MuiChip-label': { px: 0.5 } }}
+          sx={{
+            height: 16,
+            minWidth: 16,
+            fontSize: 9,
+            bgcolor: 'primary.main',
+            color: '#fff',
+            '& .MuiChip-label': { px: 0.5, color: '#fff' }
+          }}
         />
       )}
     </Box>
@@ -243,7 +249,8 @@ function RequestBuilderForm({
                 color: '#fff',
                 fontWeight: 700,
                 '.MuiOutlinedInput-notchedOutline': { border: 'none' },
-                '.MuiSvgIcon-root': { color: '#fff' }
+                '.MuiSvgIcon-root': { color: '#fff' },
+                '.MuiSelect-select': { color: '#fff !important' }
               }}
             >
               {METHODS.map((m) => (

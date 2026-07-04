@@ -1,4 +1,5 @@
-import { TextField } from '@mui/material'
+import { TextField, Box } from '@mui/material'
+import { useTheme } from '@mui/material/styles'
 import Editor from '@monaco-editor/react'
 import { memo, useCallback } from 'react'
 
@@ -49,25 +50,38 @@ function CodeEditor({
   minRows = 10,
   editorKey
 }: Props) {
+  const theme = useTheme()
   const handleChange = useCallback((v: string | undefined) => onChange(v || ''), [onChange])
+  const monacoTheme = theme.palette.mode === 'dark' ? 'vs-dark' : 'vs'
 
   return (
-    <Editor
-      key={editorKey}
-      height={height}
-      language={language}
-      value={value}
-      onChange={handleChange}
-      loading={<FallbackEditor value={value} onChange={onChange} height={height} minRows={minRows} />}
-      options={{
-        minimap: { enabled: false },
-        fontSize: 11,
-        lineHeight: 16,
-        scrollBeyondLastLine: false,
-        padding: { top: 4, bottom: 4 },
-        scrollbar: { verticalScrollbarSize: 8, horizontalScrollbarSize: 8 }
+    <Box
+      sx={{
+        border: 1,
+        borderColor: 'divider',
+        borderRadius: 1,
+        overflow: 'hidden',
+        bgcolor: theme.palette.mode === 'dark' ? '#1e1e1e' : 'background.paper'
       }}
-    />
+    >
+      <Editor
+        key={`${editorKey ?? language}:${monacoTheme}`}
+        height={height}
+        language={language}
+        value={value}
+        onChange={handleChange}
+        theme={monacoTheme}
+        loading={<FallbackEditor value={value} onChange={onChange} height={height} minRows={minRows} />}
+        options={{
+          minimap: { enabled: false },
+          fontSize: 11,
+          lineHeight: 16,
+          scrollBeyondLastLine: false,
+          padding: { top: 4, bottom: 4 },
+          scrollbar: { verticalScrollbarSize: 8, horizontalScrollbarSize: 8 }
+        }}
+      />
+    </Box>
   )
 }
 

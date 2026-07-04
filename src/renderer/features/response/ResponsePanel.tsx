@@ -198,7 +198,7 @@ const HtmlPreview = memo(function HtmlPreview({
   responseKey: string
 }) {
   return (
-    <Box sx={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+    <Box sx={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column', p: 0.5 }}>
       <Box
         component="iframe"
         key={responseKey}
@@ -209,7 +209,9 @@ const HtmlPreview = memo(function HtmlPreview({
           flex: 1,
           width: '100%',
           minHeight: 120,
-          border: 0,
+          border: 1,
+          borderColor: 'divider',
+          borderRadius: 1,
           bgcolor: '#fff'
         }}
       />
