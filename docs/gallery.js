@@ -13,23 +13,33 @@
   const btnNext = lightbox.querySelector('.lightbox-next')
 
   const items = cards.map((card) => ({
-    src: card.dataset.full || card.querySelector('img')?.src || '',
+    src: card.dataset.full || '',
+    thumb: card.dataset.thumb || card.querySelector('img')?.src || '',
     alt: card.querySelector('img')?.alt || '',
     caption: card.querySelector('.gallery-card-caption')?.textContent?.trim() || ''
   }))
 
   let index = 0
   let lastFocus = null
+  let thumbsBuilt = false
 
-  function renderThumbs() {
+  function buildThumbs() {
+    if (thumbsBuilt) return
     thumbsEl.innerHTML = items
       .map(
         (item, i) =>
           `<button type="button" class="lightbox-thumb${i === index ? ' is-active' : ''}" data-index="${i}" aria-label="View ${item.alt}">
-            <img src="${item.src}" alt="" loading="lazy">
+            <img src="${item.thumb}" alt="" width="72" height="45" decoding="async">
           </button>`
       )
       .join('')
+    thumbsBuilt = true
+  }
+
+  function updateActiveThumb() {
+    thumbsEl.querySelectorAll('.lightbox-thumb').forEach((btn, i) => {
+      btn.classList.toggle('is-active', i === index)
+    })
   }
 
   function show(i) {
@@ -39,13 +49,14 @@
     imgEl.alt = item.alt
     captionEl.textContent = item.caption
     counterEl.textContent = `${index + 1} / ${items.length}`
-    renderThumbs()
+    if (thumbsBuilt) updateActiveThumb()
     btnPrev.disabled = items.length <= 1
     btnNext.disabled = items.length <= 1
   }
 
   function open(i) {
     lastFocus = document.activeElement
+    buildThumbs()
     show(i)
     lightbox.hidden = false
     lightbox.setAttribute('aria-hidden', 'false')
@@ -57,7 +68,7 @@
     lightbox.hidden = true
     lightbox.setAttribute('aria-hidden', 'true')
     document.body.classList.remove('lightbox-open')
-    imgEl.src = ''
+    imgEl.removeAttribute('src')
     if (lastFocus instanceof HTMLElement) lastFocus.focus()
   }
 
@@ -82,4 +93,21 @@
     if (e.key === 'ArrowLeft') show(index - 1)
     if (e.key === 'ArrowRight') show(index + 1)
   })
+
+  // Defer gallery image decode until section is near viewport
+  const gallery = document.querySelector('.gallery-section')
+  if (gallery && 'IntersectionObserver' in window) {
+    const imgs = gallery.querySelectorAll('img[loading="lazy"]')
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return
+          const img = entry.target
+          io.unobserve(img)
+        })
+      },
+      { rootMargin: '200px 0px' }
+    )
+    imgs.forEach((img) => io.observe(img))
+  }
 })()
