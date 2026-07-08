@@ -2,6 +2,7 @@ import { describe, expect, it, afterEach } from 'vitest'
 import {
   addMockRoute,
   clearMockRoutes,
+  ensureMockRoute,
   normalizeMockPath,
   seedDefaultRouteIfEmpty,
   startMockServer,
@@ -113,8 +114,8 @@ describe('mock-server.service', () => {
     expect(state.routes).toHaveLength(1)
   })
 
-  it('start flow: seed then serve GET /api/hello', async () => {
-    seedDefaultRouteIfEmpty({
+  it('ensures route exists before serving', async () => {
+    ensureMockRoute({
       method: 'GET',
       path: '/api/hello',
       statusCode: 200,
@@ -125,6 +126,22 @@ describe('mock-server.service', () => {
     const res = await fetch(`${state.baseUrl}/api/hello`)
     expect(res.status).toBe(200)
     expect(await res.text()).toBe('{"ok":true}')
+  })
+
+  it('exposes health endpoint', async () => {
+    addMockRoute({
+      method: 'GET',
+      path: '/api/hello',
+      statusCode: 200,
+      body: 'ok',
+      headers: {}
+    })
+    const state = await startMockServer(0)
+    const res = await fetch(`${state.baseUrl}/__lisek/mock/health`)
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.lisekMock).toBe(true)
+    expect(body.routes).toBeGreaterThan(0)
   })
 })
 

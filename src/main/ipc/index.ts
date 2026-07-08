@@ -37,9 +37,10 @@ import {
 import {
   addMockRoute,
   clearMockRoutes,
+  ensureMockRoute,
   getMockServerState,
   removeMockRoute,
-  seedDefaultRouteIfEmpty,
+  restartMockServer,
   startMockServer,
   stopMockServer
 } from '../services/mock-server.service'
@@ -210,9 +211,12 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null) {
   ipcMain.handle('sse:disconnect', (_, connectionId) => disconnectSse(connectionId))
 
   ipcMain.handle('mock:getState', () => getMockServerState())
-  ipcMain.handle('mock:start', async (_, port?, seedRoute?) => {
+  ipcMain.handle('mock:start', async (_, port?, seedRoute?, forceRestart?) => {
     if (seedRoute) {
-      seedDefaultRouteIfEmpty(seedRoute)
+      ensureMockRoute(seedRoute)
+    }
+    if (forceRestart) {
+      return restartMockServer(port)
     }
     return startMockServer(port)
   })

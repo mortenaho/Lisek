@@ -6,6 +6,7 @@ import { registerIpcHandlers } from './ipc'
 import { seedFreshInstall, seedScreenshotDemo } from './services/repository'
 import { configureCookieJar } from './services/cookie-jar.service'
 import { initScheduledJobs } from './services/schedule.service'
+import { shutdownMockServer } from './services/mock-server.service'
 import { APP_INFO } from '../../shared/appInfo'
 
 let mainWindow: BrowserWindow | null = null
@@ -152,4 +153,8 @@ app.whenReady().then(async () => {
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
+})
+
+app.on('will-quit', () => {
+  void shutdownMockServer()
 })

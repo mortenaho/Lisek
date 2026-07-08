@@ -353,8 +353,7 @@ function RequestBuilderForm({
       <Box sx={{ display: 'flex', gap: 1, mb: 0.75, flexWrap: 'wrap' }}>
         <TextField
           size="small"
-          label="Tags"
-          placeholder="smoke, api"
+          placeholder="Tags: smoke, api"
           value={(request.tags || []).join(', ')}
           onChange={(e) =>
             patch({
@@ -368,8 +367,7 @@ function RequestBuilderForm({
         />
         <TextField
           size="small"
-          label="Notes"
-          placeholder="Request notes"
+          placeholder="Notes (optional)"
           value={request.notes || ''}
           onChange={(e) => patch({ notes: e.target.value })}
           sx={{ minWidth: 180, flex: 2, ...COMPACT.input }}

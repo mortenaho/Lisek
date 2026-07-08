@@ -401,7 +401,7 @@ export interface LisekAPI {
   }
   mock: {
     getState: () => Promise<MockServerState>
-    start: (port?: number, seedRoute?: Omit<MockRoute, 'id'>) => Promise<MockServerState>
+    start: (port?: number, seedRoute?: Omit<MockRoute, 'id'>, forceRestart?: boolean) => Promise<MockServerState>
     stop: () => Promise<MockServerState>
     addRoute: (route: Omit<MockRoute, 'id'>) => Promise<MockServerState>
     removeRoute: (id: string) => Promise<MockServerState>

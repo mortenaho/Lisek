@@ -112,7 +112,7 @@ const lisek: LisekAPI = {
   },
   mock: {
     getState: () => ipcRenderer.invoke('mock:getState'),
-    start: (port, seedRoute) => ipcRenderer.invoke('mock:start', port, seedRoute),
+    start: (port, seedRoute, forceRestart) => ipcRenderer.invoke('mock:start', port, seedRoute, forceRestart),
     stop: () => ipcRenderer.invoke('mock:stop'),
     addRoute: (route) => ipcRenderer.invoke('mock:addRoute', route),
     removeRoute: (id) => ipcRenderer.invoke('mock:removeRoute', id),

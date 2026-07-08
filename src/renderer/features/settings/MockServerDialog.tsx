@@ -76,17 +76,14 @@ export default function MockServerDialog({ open, onClose }: Props) {
   const startServer = async () => {
     setError(null)
     try {
-      const seedRoute =
-        state.routes.length === 0
-          ? {
-              method,
-              path,
-              statusCode: parseInt(statusCode, 10) || 200,
-              body,
-              headers: { 'content-type': 'application/json' }
-            }
-          : undefined
-      const next = await window.lisek.mock.start(parseInt(port, 10) || 0, seedRoute)
+      const seedRoute = {
+        method,
+        path,
+        statusCode: parseInt(statusCode, 10) || 200,
+        body,
+        headers: { 'content-type': 'application/json' }
+      }
+      const next = await window.lisek.mock.start(parseInt(port, 10) || 0, seedRoute, true)
       setState(next)
       if (next.port) setPort(String(next.port))
     } catch (err) {
