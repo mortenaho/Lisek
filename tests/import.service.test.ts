@@ -50,6 +50,30 @@ describe('importInsomniaFromContent', () => {
     expect(result.collectionId).toBeTruthy()
   })
 
+  it('imports yaml insomnia workspace with requests', () => {
+    const content = `
+__export_format: 4
+resources:
+  - _type: workspace
+    _id: wrk_1
+    name: Demo Workspace
+  - _type: request_group
+    _id: fld_1
+    parentId: wrk_1
+    name: Users
+  - _type: request
+    _id: req_1
+    parentId: fld_1
+    name: List Users
+    method: GET
+    url: https://api.example.com/users
+`
+
+    const result = importInsomniaFromContent(content, 'demo.yaml')
+    expect(result.count).toBe(1)
+    expect(result.collectionId).toBeTruthy()
+  })
+
   it('rejects postman collection for insomnia import', () => {
     const content = JSON.stringify({
       info: { schema: 'https://schema.getpostman.com/json/collection/v2.1.0/collection.json' },
@@ -73,5 +97,22 @@ describe('importPostmanFromContent', () => {
     })
 
     expect(() => importPostmanFromContent(content, 'insomnia.json')).toThrow(/Insomnia/i)
+  })
+
+  it('imports yaml postman collection', () => {
+    const content = `
+info:
+  name: Demo Collection
+  schema: https://schema.getpostman.com/json/collection/v2.1.0/collection.json
+item:
+  - name: List Users
+    request:
+      method: GET
+      url: https://api.example.com/users
+`
+
+    const result = importPostmanFromContent(content, 'postman.yaml')
+    expect(result.count).toBe(1)
+    expect(result.collectionId).toBeTruthy()
   })
 })

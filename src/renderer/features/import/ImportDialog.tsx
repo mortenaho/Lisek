@@ -25,9 +25,9 @@ const FORMAT_META: Record<
 > = {
   postman: {
     title: 'Postman Collection',
-    subtitle: 'Import Postman Collection v2.1 (.json)',
+    subtitle: 'Import Postman Collection v2.1 (.json, .yaml, or .yml)',
     placeholder: 'https://example.com/collection.json',
-    extensions: ['json']
+    extensions: ['json', 'yaml', 'yml']
   },
   openapi: {
     title: 'OpenAPI / Swagger',
@@ -37,9 +37,9 @@ const FORMAT_META: Record<
   },
   insomnia: {
     title: 'Insomnia',
-    subtitle: 'Import Insomnia export (.json)',
+    subtitle: 'Import Insomnia export (.json, .yaml, or .yml)',
     placeholder: 'https://example.com/insomnia-export.json',
-    extensions: ['json']
+    extensions: ['json', 'yaml', 'yml']
   }
 }
 
@@ -247,13 +247,13 @@ export default function ImportDialog() {
       <DialogContent sx={{ minWidth: 320 }}>
         <List>
           <ListItemButton onClick={() => setImportDialog(true, 'postman')}>
-            <ListItemText primary="Postman" secondary="Collection v2.1 — file or URL" />
+            <ListItemText primary="Postman" secondary=".json, .yaml, .yml — file or URL" />
           </ListItemButton>
           <ListItemButton onClick={() => setImportDialog(true, 'openapi')}>
-            <ListItemText primary="OpenAPI / Swagger" secondary=".json, .yaml — file or URL" />
+            <ListItemText primary="OpenAPI / Swagger" secondary=".json, .yaml, .yml — file or URL" />
           </ListItemButton>
           <ListItemButton onClick={() => setImportDialog(true, 'insomnia')}>
-            <ListItemText primary="Insomnia" secondary="Export v4 — file or URL" />
+            <ListItemText primary="Insomnia" secondary=".json, .yaml, .yml — file or URL" />
           </ListItemButton>
           <ListItemButton onClick={() => setImportDialog(true, 'curl')}>
             <ListItemText primary="cURL" secondary="Paste cURL command" />

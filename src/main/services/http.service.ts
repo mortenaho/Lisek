@@ -1,6 +1,5 @@
 import { readFileSync } from 'fs'
 import { basename } from 'path'
-import { Agent, fetch as undiciFetch } from 'undici'
 import type {
   AuthConfig,
   AuthType,
@@ -11,12 +10,8 @@ import type {
 } from '../../../shared/types'
 import { substituteKeyValues, substituteVariables } from './variable.service'
 import { fetchOAuthToken } from './oauth.service'
-import {
-  applyCookieHeader,
-  cookiesToKeyValues,
-  extractSetCookieHeaders,
-  storeSetCookieHeaders
-} from './cookie-jar.service'
+import { cookiesToKeyValues } from './cookie-jar.service'
+import { fetchWithCookieJar } from './http-fetch.service'
 
 function buildUrl(baseUrl: string, params: KeyValue[]): string {
   const url = new URL(baseUrl)
@@ -24,18 +19,6 @@ function buildUrl(baseUrl: string, params: KeyValue[]): string {
     if (p.enabled && p.key) url.searchParams.set(p.key, p.value)
   }
   return url.toString()
-}
-
-async function secureFetch(
-  url: string,
-  init: RequestInit,
-  sslVerify: boolean
-): Promise<Response> {
-  if (sslVerify !== false) {
-    return fetch(url, init)
-  }
-  const agent = new Agent({ connect: { rejectUnauthorized: false } })
-  return undiciFetch(url, { ...init, dispatcher: agent } as never) as unknown as Response
 }
 
 async function applyAuth(
@@ -179,19 +162,19 @@ export async function sendHttpRequest(
     const { body, headers: bodyHeaders } = buildBody(processedPayload)
     Object.assign(headers, bodyHeaders)
 
-    applyCookieHeader(url, headers)
-
     const start = Date.now()
-    const response = await secureFetch(
+    const { response, storedCookies } = await fetchWithCookieJar(
       url.toString(),
       {
         method: payload.method,
         headers,
         body: body as BodyInit | undefined,
-        signal: controller.signal,
-        redirect: options.followRedirects === false ? 'manual' : 'follow'
+        signal: controller.signal
       },
-      sslVerify
+      {
+        sslVerify,
+        followRedirects: options.followRedirects !== false
+      }
     )
 
     const responseBody = await response.text()
@@ -200,9 +183,6 @@ export async function sendHttpRequest(
     response.headers.forEach((value, key) => {
       responseHeaders[key] = value
     })
-
-    const setCookies = extractSetCookieHeaders(response)
-    const storedCookies = storeSetCookieHeaders(setCookies, url)
 
     return {
       statusCode: response.status,

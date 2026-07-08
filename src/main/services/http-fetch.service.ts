@@ -1,0 +1,91 @@
+import { Agent, fetch as undiciFetch } from 'undici'
+import type { CookieRecord } from '../../../shared/types'
+import {
+  applyCookieHeader,
+  extractSetCookieHeaders,
+  storeSetCookieHeaders
+} from './cookie-jar.service'
+
+const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308])
+const MAX_REDIRECTS = 20
+
+export async function secureFetch(
+  url: string,
+  init: RequestInit,
+  sslVerify: boolean
+): Promise<Response> {
+  if (sslVerify !== false) {
+    return fetch(url, init)
+  }
+  const agent = new Agent({ connect: { rejectUnauthorized: false } })
+  return undiciFetch(url, { ...init, dispatcher: agent } as never) as unknown as Response
+}
+
+export interface FetchWithCookieJarResult {
+  response: Response
+  storedCookies: CookieRecord[]
+  finalUrl: URL
+}
+
+export async function fetchWithCookieJar(
+  url: string,
+  init: RequestInit,
+  options: { sslVerify?: boolean; followRedirects?: boolean } = {}
+): Promise<FetchWithCookieJarResult> {
+  const sslVerify = options.sslVerify !== false
+  const followRedirects = options.followRedirects !== false
+  const storedCookies: CookieRecord[] = []
+
+  let currentUrl = new URL(url)
+  let method = (init.method || 'GET').toUpperCase()
+  let body = init.body
+  const headers: Record<string, string> = {
+    ...((init.headers as Record<string, string> | undefined) || {})
+  }
+
+  for (let redirects = 0; redirects <= MAX_REDIRECTS; redirects++) {
+    applyCookieHeader(currentUrl, headers)
+
+    const response = await secureFetch(
+      currentUrl.toString(),
+      {
+        ...init,
+        method,
+        body,
+        headers,
+        redirect: 'manual'
+      },
+      sslVerify
+    )
+
+    storedCookies.push(...storeSetCookieHeaders(extractSetCookieHeaders(response), currentUrl))
+
+    if (!followRedirects || !REDIRECT_STATUSES.has(response.status)) {
+      return { response, storedCookies, finalUrl: currentUrl }
+    }
+
+    const location = response.headers.get('location')
+    if (!location) {
+      return { response, storedCookies, finalUrl: currentUrl }
+    }
+
+    if (redirects >= MAX_REDIRECTS) {
+      throw new Error('Too many redirects')
+    }
+
+    if ([301, 302, 303].includes(response.status) && method !== 'GET' && method !== 'HEAD') {
+      method = 'GET'
+      body = undefined
+      for (const key of Object.keys(headers)) {
+        const lower = key.toLowerCase()
+        if (lower === 'content-type' || lower === 'content-length') {
+          delete headers[key]
+        }
+      }
+    }
+
+    currentUrl = new URL(location, currentUrl)
+  }
+
+  throw new Error('Too many redirects')
+}

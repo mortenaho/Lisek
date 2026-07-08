@@ -1,10 +1,11 @@
 import { readFileSync, writeFileSync } from 'fs'
 import { basename } from 'path'
 import { v4 as uuidv4 } from 'uuid'
+import YAML from 'yaml'
 import { getAll, getOne, runQuery } from '../db'
 import type { AuthConfig, AuthType, KeyValue, RequestModel } from '../../../shared/types'
 import { rowToRequest, saveRequest } from './repository'
-import { fetchImportSource } from './fetch-import.service'
+import { fetchImportSource, type ImportFormatHint } from './fetch-import.service'
 
 interface PostmanItem {
   name: string
@@ -57,28 +58,45 @@ interface InsomniaResource {
   }
 }
 
-function parseJsonContent(content: string, label: string): unknown {
+function parseImportContent(
+  content: string,
+  label: string,
+  formatHint: ImportFormatHint = 'unknown'
+): unknown {
   try {
-    return JSON.parse(content)
+    if (formatHint === 'json') return JSON.parse(content)
+    if (formatHint === 'yaml') return YAML.parse(content)
+
+    const trimmed = content.trim()
+    if (trimmed.startsWith('{') || trimmed.startsWith('[')) return JSON.parse(content)
+    return YAML.parse(content)
   } catch {
-    throw new Error(`Invalid JSON in ${label}`)
+    throw new Error(`Invalid JSON or YAML in ${label}`)
   }
 }
 
+function detectFileFormatHint(filePathOrName: string): ImportFormatHint {
+  const lower = filePathOrName.toLowerCase()
+  if (lower.endsWith('.yaml') || lower.endsWith('.yml')) return 'yaml'
+  if (lower.endsWith('.json')) return 'json'
+  return 'unknown'
+}
+
 export function importPostman(filePath: string): { collectionId: string; count: number } {
-  return importPostmanFromContent(readFileSync(filePath, 'utf-8'), basename(filePath))
+  return importPostmanFromContent(readFileSync(filePath, 'utf-8'), basename(filePath), detectFileFormatHint(filePath))
 }
 
 export async function importPostmanFromUrl(url: string): Promise<{ collectionId: string; count: number }> {
   const fetched = await fetchImportSource(url)
-  return importPostmanFromContent(fetched.content, fetched.sourceLabel)
+  return importPostmanFromContent(fetched.content, fetched.sourceLabel, fetched.formatHint)
 }
 
 export function importPostmanFromContent(
   content: string,
-  sourceName: string
+  sourceName: string,
+  formatHint: ImportFormatHint = detectFileFormatHint(sourceName)
 ): { collectionId: string; count: number } {
-  const parsed = parseJsonContent(content, sourceName)
+  const parsed = parseImportContent(content, sourceName, formatHint)
   if (isInsomniaExport(parsed)) {
     throw new Error('This URL points to an Insomnia export. Use Import → Insomnia instead.')
   }
@@ -132,19 +150,20 @@ export function importPostmanFromContent(
 }
 
 export function importInsomnia(filePath: string): { collectionId: string; count: number } {
-  return importInsomniaFromContent(readFileSync(filePath, 'utf-8'), basename(filePath))
+  return importInsomniaFromContent(readFileSync(filePath, 'utf-8'), basename(filePath), detectFileFormatHint(filePath))
 }
 
 export async function importInsomniaFromUrl(url: string): Promise<{ collectionId: string; count: number }> {
   const fetched = await fetchImportSource(url)
-  return importInsomniaFromContent(fetched.content, fetched.sourceLabel)
+  return importInsomniaFromContent(fetched.content, fetched.sourceLabel, fetched.formatHint)
 }
 
 export function importInsomniaFromContent(
   content: string,
-  sourceName: string
+  sourceName: string,
+  formatHint: ImportFormatHint = detectFileFormatHint(sourceName)
 ): { collectionId: string; count: number } {
-  const parsed = parseJsonContent(content, sourceName)
+  const parsed = parseImportContent(content, sourceName, formatHint)
   if (!isInsomniaExport(parsed)) {
     throw new Error('Not a valid Insomnia export')
   }

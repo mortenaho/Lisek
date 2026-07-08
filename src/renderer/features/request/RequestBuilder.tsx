@@ -33,6 +33,7 @@ import GraphQLTab from './GraphQLTab'
 import GrpcTab from './GrpcTab'
 import ScriptsTab from './ScriptsTab'
 import ConfirmDialog from '../../components/ConfirmDialog'
+import { resolveCollectionVariables } from '@shared/collectionVariables'
 import VariableInput from '../../components/VariableInput'
 import { COMPACT } from '../../theme/compact'
 import { applyControlledInputChange } from '../../utils/inputSelection'
@@ -50,7 +51,6 @@ const METHOD_COLORS: Record<HttpMethod, string> = {
 
 const METHODS: HttpMethod[] = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']
 const PROTOCOLS: Protocol[] = ['http', 'graphql', 'websocket', 'grpc']
-const EMPTY_VARS: KeyValue[] = []
 
 type RequestSection = 'params' | 'headers' | 'body' | 'auth' | 'scripts' | 'protocol'
 
@@ -172,6 +172,20 @@ function RequestBuilderForm({
     useAppStore.setState({ loading: false })
   }, [])
 
+  const handleUrlEnter = useCallback(() => {
+    void handleSend()
+  }, [handleSend])
+
+  const handleUrlFieldKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault()
+        void handleSend()
+      }
+    },
+    [handleSend]
+  )
+
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (e.ctrlKey && e.key === 'Enter') void handleSend()
@@ -278,6 +292,7 @@ function RequestBuilderForm({
               syncKey={request.id}
               value={request.url}
               onChange={patchUrl}
+              onEnter={handleUrlEnter}
               placeholder="https://api.example.com or {{baseUrl}}/path"
               collectionVariables={collectionVariables}
             />
@@ -291,6 +306,7 @@ function RequestBuilderForm({
             onChange={(e) =>
               applyControlledInputChange(e.target, request.wsUrl, e.target.value, (v) => patch({ wsUrl: v }))
             }
+            onKeyDown={handleUrlFieldKeyDown}
             sx={COMPACT.input}
           />
         ) : (
@@ -304,6 +320,7 @@ function RequestBuilderForm({
                 patch({ grpcTarget: v })
               )
             }
+            onKeyDown={handleUrlFieldKeyDown}
             sx={COMPACT.input}
           />
         )}
@@ -518,10 +535,11 @@ function RequestBuilderShell() {
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deleteName, setDeleteName] = useState('')
 
-  const collectionVariables = useAppStore((s) => {
-    if (!collectionId) return EMPTY_VARS
-    return s.collections.find((c) => c.id === collectionId)?.variables ?? EMPTY_VARS
-  })
+  const collections = useAppStore((s) => s.collections)
+  const collectionVariables = useMemo(
+    () => resolveCollectionVariables(collectionId, collections),
+    [collectionId, collections]
+  )
 
   const openDeleteDialog = useCallback(() => {
     setDeleteName(useAppStore.getState().activeRequest?.name ?? '')

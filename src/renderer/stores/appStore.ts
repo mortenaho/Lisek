@@ -10,6 +10,7 @@ import type {
   Settings,
   TestResult
 } from '@shared/types'
+import { resolveCollectionVariables } from '@shared/collectionVariables'
 
 interface AppState {
   themeMode: 'light' | 'dark'
@@ -249,7 +250,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       }
 
       const activeEnv = get().environments.find((e) => e.isActive)
-      const collection = get().collections.find((c) => c.id === saved.collectionId)
+      const collectionVariables = resolveCollectionVariables(saved.collectionId, get().collections)
 
       const result = await window.lisek.request.send({
         requestId: saved.id,
@@ -271,7 +272,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         testScript: saved.testScript,
         environmentId: activeEnv?.id,
         collectionId: saved.collectionId,
-        collectionVariables: collection?.variables
+        collectionVariables
       })
 
       set({

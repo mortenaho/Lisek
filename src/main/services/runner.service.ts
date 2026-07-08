@@ -1,4 +1,5 @@
 import type { CollectionRunResult, HttpRequestPayload, KeyValue } from '../../../shared/types'
+import { resolveCollectionVariables } from '../../../shared/collectionVariables'
 import { listRequests, saveRequestLastResponse, listCollections, getActiveEnvironment, saveEnvironment } from './repository'
 import { sendHttpRequest } from './http.service'
 import { runScript } from './script.service'
@@ -10,7 +11,6 @@ function collectCollectionRequestIds(collectionId: string, allCollections: { id:
 
 export async function runCollection(
   collectionId: string,
-  collectionVars: KeyValue[],
   options: { sslVerify?: boolean; timeoutMs?: number; followRedirects?: boolean; stopOnFailure?: boolean } = {}
 ): Promise<CollectionRunResult[]> {
   const collections = listCollections()
@@ -37,6 +37,8 @@ export async function runCollection(
     }
 
     try {
+      const collectionVars = resolveCollectionVariables(req.collectionId, collections)
+
       const payload: HttpRequestPayload = {
         requestId: req.id,
         method: req.method,
@@ -59,16 +61,18 @@ export async function runCollection(
       }
 
       let processedPayload = { ...payload }
+      let resolvedCollectionVars = collectionVars
       if (payload.preRequestScript) {
         const scriptResult = runScript(
           payload.preRequestScript,
-          { request: payload, environmentVars: envVars, collectionVars },
+          { request: payload, environmentVars: envVars, collectionVars: resolvedCollectionVars },
           'prerequest'
         )
         if (scriptResult.requestChanges.url) processedPayload.url = scriptResult.requestChanges.url
+        resolvedCollectionVars = scriptResult.collectionChanges
       }
 
-      const response = await sendHttpRequest(processedPayload, envVars, collectionVars, {
+      const response = await sendHttpRequest(processedPayload, envVars, resolvedCollectionVars, {
         sslVerify: options.sslVerify,
         timeoutMs: options.timeoutMs,
         followRedirects: options.followRedirects
@@ -80,7 +84,7 @@ export async function runCollection(
       if (payload.testScript) {
         const scriptResult = runScript(
           payload.testScript,
-          { request: processedPayload, response, environmentVars: envVars, collectionVars },
+          { request: processedPayload, response, environmentVars: envVars, collectionVars: resolvedCollectionVars },
           'test'
         )
         testResults = scriptResult.testResults

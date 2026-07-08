@@ -49,6 +49,7 @@ import {
 } from '../services/repository'
 import type { HttpRequestPayload } from '../../../shared/types'
 import { APP_INFO } from '../../../shared/appInfo'
+import { resolveCollectionVariables } from '../../../shared/collectionVariables'
 
 export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null) {
   const scriptHost = {
@@ -81,7 +82,7 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null) {
     const settings = getSettings()
     const activeEnv = getActiveEnvironment()
     let envVars = activeEnv?.variables || []
-    let collectionVars = payload.collectionVariables || []
+    let collectionVars = resolveCollectionVariables(payload.collectionId, listCollections())
     const scriptLogs: string[] = []
 
     let processedPayload = { ...payload }
@@ -208,8 +209,7 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null) {
 
   ipcMain.handle('runner:runCollection', async (_, collectionId, stopOnFailure = false) => {
     const settings = getSettings()
-    const collection = listCollections().find((c) => c.id === collectionId)
-    return runCollection(collectionId, collection?.variables || [], {
+    return runCollection(collectionId, {
       sslVerify: settings.sslVerify,
       timeoutMs: settings.timeoutMs,
       followRedirects: settings.followRedirects,

@@ -34,6 +34,8 @@ interface Props {
   fullWidth?: boolean
   /** Reset local text when the owning request/editor changes. */
   syncKey?: string
+  /** Called when Enter is pressed and autocomplete is not active. */
+  onEnter?: () => void
 }
 
 const INPUT_PADDING = '4px 8px'
@@ -105,7 +107,8 @@ function VariableInput({
   placeholder,
   collectionVariables = [],
   fullWidth = true,
-  syncKey
+  syncKey,
+  onEnter
 }: Props) {
   const theme = useTheme()
   const focusedRef = useRef(false)
@@ -255,20 +258,27 @@ function VariableInput({
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (!acOpen || suggestions.length === 0) return
-    if (e.key === 'ArrowDown') {
+    if (acOpen && suggestions.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        setAcIndex((i) => (i + 1) % suggestions.length)
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault()
+        setAcIndex((i) => (i - 1 + suggestions.length) % suggestions.length)
+      } else if (e.key === 'Enter' || e.key === 'Tab') {
+        e.preventDefault()
+        const item = suggestions[acIndex]
+        if (item.type === 'create') void createAndInsertVariable(item.name)
+        else insertVariable(item.name)
+      } else if (e.key === 'Escape') {
+        setAcOpen(false)
+      }
+      return
+    }
+
+    if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
-      setAcIndex((i) => (i + 1) % suggestions.length)
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault()
-      setAcIndex((i) => (i - 1 + suggestions.length) % suggestions.length)
-    } else if (e.key === 'Enter' || e.key === 'Tab') {
-      e.preventDefault()
-      const item = suggestions[acIndex]
-      if (item.type === 'create') void createAndInsertVariable(item.name)
-      else insertVariable(item.name)
-    } else if (e.key === 'Escape') {
-      setAcOpen(false)
+      onEnter?.()
     }
   }
 
