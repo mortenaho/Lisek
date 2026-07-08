@@ -195,6 +195,41 @@ const TAB_LABELS: Record<ResponseTab, string> = {
   diff: 'Diff'
 }
 
+const BinaryPreview = memo(function BinaryPreview({
+  body,
+  contentType,
+  bodyEncoding,
+  kind,
+  responseKey
+}: {
+  body: string
+  contentType: string
+  bodyEncoding: 'text' | 'base64'
+  kind: 'image' | 'pdf'
+  responseKey: string
+}) {
+  const dataUrl =
+    bodyEncoding === 'base64'
+      ? `data:${contentType || (kind === 'pdf' ? 'application/pdf' : 'image/png')};base64,${body}`
+      : body
+
+  return (
+    <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', p: 1 }}>
+      {kind === 'image' ? (
+        <Box component="img" src={dataUrl} alt="Response preview" sx={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+      ) : (
+        <Box
+          component="iframe"
+          key={responseKey}
+          title="PDF preview"
+          src={dataUrl}
+          sx={{ width: '100%', height: '100%', border: 0, bgcolor: 'background.default' }}
+        />
+      )}
+    </Box>
+  )
+})
+
 const HtmlPreview = memo(function HtmlPreview({
   html,
   responseKey
@@ -618,26 +653,29 @@ export default memo(function ResponsePanel() {
   }, [response?.headers])
 
   const bodyView = useMemo(
-    () => (response?.body ? detectResponseBody(response.body, contentType) : null),
-    [response?.body, contentType]
+    () =>
+      response?.body
+        ? detectResponseBody(response.body, contentType, response.bodyEncoding || 'text')
+        : null,
+    [response?.body, contentType, response?.bodyEncoding]
   )
 
-  const showHtmlPreview = useMemo(
-    () => (response?.body ? isHtmlResponse(response.body, contentType) : false),
-    [response?.body, contentType]
+  const showMediaPreview = useMemo(
+    () => bodyView?.language === 'html' || bodyView?.language === 'image' || bodyView?.language === 'pdf',
+    [bodyView?.language]
   )
 
   const responseKey = response ? `${response.statusCode}:${response.body.length}` : ''
 
   const tabs = useMemo(() => {
     const list: ResponseTab[] = ['body']
-    if (showHtmlPreview) list.push('preview')
+    if (showMediaPreview) list.push('preview')
     list.push('headers', 'cookies')
     if (testResults.length > 0) list.push('tests')
     if (scriptLogs.length > 0) list.push('console')
     if (snapshotBody && response?.body) list.push('diff')
     return list
-  }, [showHtmlPreview, testResults.length, scriptLogs.length, snapshotBody, response?.body])
+  }, [showMediaPreview, testResults.length, scriptLogs.length, snapshotBody, response?.body])
 
   useEffect(() => {
     setTab('body')
@@ -799,7 +837,7 @@ export default memo(function ResponsePanel() {
         </Box>
       )}
 
-      {tab === 'preview' && showHtmlPreview && (
+      {tab === 'preview' && showMediaPreview && response && (
         <Box
           sx={{
             flex: 1,
@@ -811,7 +849,17 @@ export default memo(function ResponsePanel() {
             ...COMPACT.panel
           }}
         >
-          <HtmlPreview html={response.body} responseKey={responseKey} />
+          {bodyView?.language === 'html' ? (
+            <HtmlPreview html={response.body} responseKey={responseKey} />
+          ) : (
+            <BinaryPreview
+              body={response.body}
+              contentType={contentType}
+              bodyEncoding={response.bodyEncoding || 'base64'}
+              kind={bodyView?.language === 'pdf' ? 'pdf' : 'image'}
+              responseKey={responseKey}
+            />
+          )}
         </Box>
       )}
 

@@ -150,6 +150,22 @@ function migrateSchema(database: Database) {
   if (!requestColumns.has('graphql_operation_type')) {
     database.run("ALTER TABLE requests ADD COLUMN graphql_operation_type TEXT NOT NULL DEFAULT 'query'")
   }
+
+  if (!collectionColumns.has('sync_path')) {
+    database.run("ALTER TABLE collections ADD COLUMN sync_path TEXT NOT NULL DEFAULT ''")
+  }
+
+  database.run(`
+    CREATE TABLE IF NOT EXISTS scheduled_jobs (
+      id TEXT PRIMARY KEY,
+      request_id TEXT NOT NULL,
+      schedule_expr TEXT NOT NULL,
+      enabled INTEGER NOT NULL DEFAULT 1,
+      notify INTEGER NOT NULL DEFAULT 1,
+      last_run_at INTEGER,
+      created_at INTEGER NOT NULL
+    )
+  `)
 }
 
 export async function initDatabase(path: string): Promise<{ isNew: boolean }> {

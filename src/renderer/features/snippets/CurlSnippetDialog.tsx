@@ -6,6 +6,8 @@ import {
   Button,
   Box
 } from '@mui/material'
+import CheckIcon from '@mui/icons-material/Check'
+import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import { useEffect, useState } from 'react'
 import { useAppStore } from '../../stores/appStore'
 
@@ -14,9 +16,13 @@ export default function CurlSnippetDialog() {
   const setSnippetOpen = useAppStore((s) => s.setSnippetOpen)
   const requestId = useAppStore((s) => s.activeRequest?.id)
   const [snippet, setSnippet] = useState('')
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
-    if (!open) return
+    if (!open) {
+      setCopied(false)
+      return
+    }
     const req = useAppStore.getState().activeRequest
     if (!req) return
 
@@ -31,6 +37,8 @@ export default function CurlSnippetDialog() {
 
   const copy = async () => {
     await window.lisek.clipboard.writeText(snippet)
+    setCopied(true)
+    window.setTimeout(() => setSnippetOpen(false), 600)
   }
 
   return (
@@ -53,8 +61,14 @@ export default function CurlSnippetDialog() {
       </DialogContent>
       <DialogActions>
         <Button onClick={() => setSnippetOpen(false)}>Close</Button>
-        <Button variant="contained" onClick={copy}>
-          Copy
+        <Button
+          variant="contained"
+          color={copied ? 'success' : 'primary'}
+          startIcon={copied ? <CheckIcon /> : <ContentCopyIcon />}
+          onClick={() => void copy()}
+          disabled={copied || !snippet}
+        >
+          {copied ? 'Copied!' : 'Copy'}
         </Button>
       </DialogActions>
     </Dialog>

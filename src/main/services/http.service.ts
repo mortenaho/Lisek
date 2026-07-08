@@ -178,7 +178,26 @@ export async function sendHttpRequest(
       }
     )
 
-    const responseBody = await response.text()
+    const contentType = response.headers.get('content-type') || ''
+    const isBinary =
+      /^image\//i.test(contentType) ||
+      contentType.toLowerCase().includes('application/pdf') ||
+      contentType.toLowerCase().includes('application/octet-stream')
+
+    let responseBody: string
+    let bodyEncoding: 'text' | 'base64' = 'text'
+    let sizeBytes = 0
+
+    if (isBinary) {
+      const buffer = Buffer.from(await response.arrayBuffer())
+      responseBody = buffer.toString('base64')
+      bodyEncoding = 'base64'
+      sizeBytes = buffer.length
+    } else {
+      responseBody = await response.text()
+      sizeBytes = new TextEncoder().encode(responseBody).length
+    }
+
     const durationMs = Date.now() - start
     const responseHeaders: Record<string, string> = {}
     response.headers.forEach((value, key) => {
@@ -190,8 +209,9 @@ export async function sendHttpRequest(
       statusText: response.statusText,
       headers: responseHeaders,
       body: responseBody,
+      bodyEncoding,
       durationMs,
-      sizeBytes: new TextEncoder().encode(responseBody).length,
+      sizeBytes,
       cookies: cookiesToKeyValues(storedCookies)
     }
   } finally {

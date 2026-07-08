@@ -2,9 +2,21 @@ import http from 'http'
 import { v4 as uuidv4 } from 'uuid'
 import type { MockRoute, MockServerState } from '../../../shared/types'
 
-const routes = new Map<string, MockRoute>()
-let server: http.Server | null = null
-let port = 0
+interface MockStore {
+  routes: Map<string, MockRoute>
+  server: http.Server | null
+  port: number
+}
+
+const GLOBAL_KEY = '__lisekMockServerStore'
+
+function getStore(): MockStore {
+  const g = globalThis as typeof globalThis & { [GLOBAL_KEY]?: MockStore }
+  if (!g[GLOBAL_KEY]) {
+    g[GLOBAL_KEY] = { routes: new Map(), server: null, port: 0 }
+  }
+  return g[GLOBAL_KEY]
+}
 
 function corsHeaders(): Record<string, string> {
   return {
@@ -33,20 +45,20 @@ export function normalizeMockPath(path: string): string {
   return normalized || '/'
 }
 
-function buildState(): MockServerState {
+function buildState(store: MockStore): MockServerState {
   return {
-    running: server !== null,
-    port,
-    baseUrl: server ? `http://127.0.0.1:${port}` : '',
-    routes: Array.from(routes.values())
+    running: store.server !== null,
+    port: store.port,
+    baseUrl: store.server ? `http://127.0.0.1:${store.port}` : '',
+    routes: Array.from(store.routes.values())
   }
 }
 
-function matchRoute(method: string, pathname: string): MockRoute | null {
+function matchRoute(store: MockStore, method: string, pathname: string): MockRoute | null {
   const normalizedMethod = method.toUpperCase()
   const normalizedPath = normalizeMockPath(pathname)
 
-  for (const route of routes.values()) {
+  for (const route of store.routes.values()) {
     const routePath = normalizeMockPath(route.path)
     const routeMethod = route.method.toUpperCase()
     if (routeMethod !== normalizedMethod && routeMethod !== 'ANY' && routeMethod !== '*') continue
@@ -55,83 +67,110 @@ function matchRoute(method: string, pathname: string): MockRoute | null {
   return null
 }
 
-export function getMockServerState(): MockServerState {
-  return buildState()
+function createRequestHandler(store: MockStore) {
+  return (req: http.IncomingMessage, res: http.ServerResponse) => {
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204, corsHeaders())
+      res.end()
+      return
+    }
+
+    const url = new URL(req.url || '/', `http://127.0.0.1:${store.port || 80}`)
+    const route = matchRoute(store, req.method || 'GET', url.pathname)
+    if (!route) {
+      const available = Array.from(store.routes.values()).map((r) => `${r.method} ${r.path}`)
+      res.writeHead(404, { 'content-type': 'application/json', ...corsHeaders() })
+      res.end(
+        JSON.stringify({
+          error: 'No mock route matched',
+          method: req.method,
+          path: url.pathname,
+          configuredRoutes: available,
+          hint: available.length === 0 ? 'Add a route in Mock Server before sending requests.' : undefined
+        })
+      )
+      return
+    }
+
+    const headers = { ...corsHeaders(), ...route.headers }
+    if (!headers['content-type']) {
+      headers['content-type'] = 'application/json'
+    }
+    res.writeHead(route.statusCode, headers)
+    res.end(route.body)
+  }
 }
 
-export function startMockServer(requestedPort = 0): Promise<MockServerState> {
-  if (server) return Promise.resolve(buildState())
-
-  return new Promise((resolve, reject) => {
-    const nextServer = http.createServer((req, res) => {
-      if (req.method === 'OPTIONS') {
-        res.writeHead(204, corsHeaders())
-        res.end()
-        return
-      }
-
-      const url = new URL(req.url || '/', `http://127.0.0.1:${port || requestedPort || 80}`)
-      const route = matchRoute(req.method || 'GET', url.pathname)
-      if (!route) {
-        res.writeHead(404, { 'content-type': 'application/json', ...corsHeaders() })
-        res.end(JSON.stringify({ error: 'No mock route matched', method: req.method, path: url.pathname }))
-        return
-      }
-
-      const headers = { ...corsHeaders(), ...route.headers }
-      if (!headers['content-type']) {
-        headers['content-type'] = 'application/json'
-      }
-      res.writeHead(route.statusCode, headers)
-      res.end(route.body)
-    })
-
-    nextServer.once('error', (err) => {
-      nextServer.close()
-      if (server === nextServer) {
-        server = null
-        port = 0
-      }
-      reject(err)
-    })
-
-    nextServer.listen(requestedPort, '127.0.0.1', () => {
-      server = nextServer
-      const address = server.address()
-      port = typeof address === 'object' && address ? address.port : requestedPort
-      resolve(buildState())
-    })
-  })
-}
-
-export function stopMockServer(): Promise<MockServerState> {
-  if (!server) return Promise.resolve(buildState())
-
+function closeServer(server: http.Server): Promise<void> {
   return new Promise((resolve) => {
-    const current = server
-    server = null
-    port = 0
-    current?.close(() => resolve(buildState()))
+    server.close(() => resolve())
   })
+}
+
+export function getMockServerState(): MockServerState {
+  return buildState(getStore())
+}
+
+export async function startMockServer(requestedPort = 0): Promise<MockServerState> {
+  const store = getStore()
+
+  if (store.server) {
+    return buildState(store)
+  }
+
+  const nextServer = http.createServer(createRequestHandler(store))
+
+  try {
+    await new Promise<void>((resolve, reject) => {
+      nextServer.once('error', reject)
+      nextServer.listen(requestedPort, '127.0.0.1', () => resolve())
+    })
+  } catch (err) {
+    await closeServer(nextServer)
+    throw err
+  }
+
+  store.server = nextServer
+  const address = nextServer.address()
+  store.port = typeof address === 'object' && address ? address.port : requestedPort
+  return buildState(store)
+}
+
+export async function stopMockServer(): Promise<MockServerState> {
+  const store = getStore()
+  if (!store.server) return buildState(store)
+
+  const current = store.server
+  store.server = null
+  store.port = 0
+  await closeServer(current)
+  return buildState(store)
 }
 
 export function addMockRoute(route: Omit<MockRoute, 'id'>): MockServerState {
+  const store = getStore()
   const id = uuidv4()
-  routes.set(id, {
+  store.routes.set(id, {
     ...route,
     id,
     method: route.method.trim().toUpperCase() || 'GET',
     path: normalizeMockPath(route.path)
   })
-  return buildState()
+  return buildState(store)
 }
 
 export function removeMockRoute(id: string): MockServerState {
-  routes.delete(id)
-  return buildState()
+  getStore().routes.delete(id)
+  return buildState(getStore())
 }
 
 export function clearMockRoutes(): MockServerState {
-  routes.clear()
-  return buildState()
+  getStore().routes.clear()
+  return buildState(getStore())
+}
+
+export function seedDefaultRouteIfEmpty(route: Omit<MockRoute, 'id'>): MockServerState {
+  const store = getStore()
+  if (store.routes.size > 0) return buildState(store)
+  return addMockRoute(route)
 }

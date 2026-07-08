@@ -38,6 +38,8 @@ export default function ProtoPanel() {
   const [servicesByProto, setServicesByProto] = useState<Record<string, GrpcServiceInfo[]>>({})
   const [loadingId, setLoadingId] = useState<string | null>(null)
   const [reflectTarget, setReflectTarget] = useState('localhost:50051')
+  const [protoUrl, setProtoUrl] = useState('')
+  const [importingUrl, setImportingUrl] = useState(false)
   const [reflectError, setReflectError] = useState<string | null>(null)
   const [reflectedServices, setReflectedServices] = useState<GrpcServiceInfo[]>([])
   const [reflecting, setReflecting] = useState(false)
@@ -88,6 +90,18 @@ export default function ProtoPanel() {
     },
     [expanded, servicesByProto]
   )
+
+  const importProtoFromUrl = async () => {
+    if (!protoUrl.trim()) return
+    setImportingUrl(true)
+    try {
+      await window.lisek.proto.importFromUrl(protoUrl.trim())
+      setProtoUrl('')
+      await loadProtoFiles()
+    } finally {
+      setImportingUrl(false)
+    }
+  }
 
   const reflect = async () => {
     if (!reflectTarget.trim()) return
@@ -159,10 +173,22 @@ export default function ProtoPanel() {
         fullWidth
         startIcon={<UploadFileIcon />}
         onClick={() => void importProto()}
-        sx={{ mb: 1.5 }}
+        sx={{ mb: 1 }}
       >
         Import .proto
       </Button>
+      <Box sx={{ display: 'flex', gap: 0.75, mb: 1.5 }}>
+        <TextField
+          size="small"
+          fullWidth
+          placeholder="https://example.com/api.proto"
+          value={protoUrl}
+          onChange={(e) => setProtoUrl(e.target.value)}
+        />
+        <Button size="small" variant="contained" onClick={() => void importProtoFromUrl()} disabled={importingUrl}>
+          {importingUrl ? '…' : 'URL'}
+        </Button>
+      </Box>
 
       {protoFiles.length === 0 ? (
         <Typography variant="body2" color="text.secondary" sx={{ px: 0.5, py: 1 }}>

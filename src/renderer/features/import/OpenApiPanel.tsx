@@ -50,6 +50,7 @@ export default function OpenApiPanel() {
   const loadOpenApiSpecs = useAppStore((s) => s.loadOpenApiSpecs)
   const loadCollections = useAppStore((s) => s.loadCollections)
   const loadRequests = useAppStore((s) => s.loadRequests)
+  const loadEnvironments = useAppStore((s) => s.loadEnvironments)
   const selectRequest = useAppStore((s) => s.selectRequest)
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   const [pathsBySpec, setPathsBySpec] = useState<Record<string, OpenApiPathItem[]>>({})
@@ -69,6 +70,11 @@ export default function OpenApiPanel() {
       await loadCollections()
       await loadRequests()
     }
+  }
+
+  const createEnvironment = async (specId: string) => {
+    await window.lisek.openapi.createEnvironment(specId, true)
+    await loadEnvironments()
   }
 
   const deleteSpec = async (id: string) => {
@@ -218,6 +224,11 @@ export default function OpenApiPanel() {
                       overflow: 'auto'
                     }}
                   >
+                    <Box sx={{ px: 1.5, py: 1 }}>
+                      <Button size="small" variant="outlined" onClick={() => void createEnvironment(spec.id)}>
+                        Create environment from spec
+                      </Button>
+                    </Box>
                     {isLoading && (
                       <Typography
                         variant="caption"

@@ -142,6 +142,7 @@ export interface CollectionModel {
   pinned: boolean
   variables: KeyValue[]
   description?: string
+  syncPath?: string
   createdAt: number
 }
 
@@ -170,9 +171,20 @@ export interface HttpResponse {
   statusText: string
   headers: Record<string, string>
   body: string
+  bodyEncoding?: 'text' | 'base64'
   durationMs: number
   sizeBytes: number
   cookies: KeyValue[]
+}
+
+export interface ScheduledJobModel {
+  id: string
+  requestId: string
+  scheduleExpr: string
+  enabled: boolean
+  notify: boolean
+  lastRunAt?: number
+  createdAt: number
 }
 
 export interface HttpRequestPayload {
@@ -338,11 +350,13 @@ export interface LisekAPI {
     insomniaFromUrl: (url: string) => Promise<{ collectionId: string; count: number }>
     har: (filePath: string, collectionId?: string | null) => Promise<{ collectionId: string; count: number }>
     curl: (curlString: string, collectionId?: string | null) => Promise<RequestModel>
+    bruno: (folderPath: string, collectionId?: string | null) => Promise<{ collectionId: string; count: number }>
   }
   export: {
     postman: (collectionId: string, filePath: string) => Promise<void>
     openapi: (collectionId: string, filePath: string) => Promise<void>
     insomnia: (collectionId: string, filePath: string) => Promise<void>
+    bruno: (collectionId: string, folderPath: string) => Promise<number>
     curl: (requestId: string) => Promise<string>
     har: (historyId: string, filePath: string) => Promise<void>
     harFromRequest: (requestId: string, filePath: string) => Promise<void>
@@ -357,6 +371,7 @@ export interface LisekAPI {
     delete: (id: string) => Promise<void>
     getPaths: (specId: string) => Promise<OpenApiPathItem[]>
     generateRequest: (specId: string, path: string, method: string, collectionId?: string | null) => Promise<RequestModel>
+    createEnvironment: (specId: string, activate?: boolean) => Promise<EnvironmentModel>
   }
   cookies: {
     list: () => Promise<CookieRecord[]>
@@ -386,7 +401,7 @@ export interface LisekAPI {
   }
   mock: {
     getState: () => Promise<MockServerState>
-    start: (port?: number) => Promise<MockServerState>
+    start: (port?: number, seedRoute?: Omit<MockRoute, 'id'>) => Promise<MockServerState>
     stop: () => Promise<MockServerState>
     addRoute: (route: Omit<MockRoute, 'id'>) => Promise<MockServerState>
     removeRoute: (id: string) => Promise<MockServerState>
@@ -411,8 +426,26 @@ export interface LisekAPI {
   }
   proto: {
     list: () => Promise<ProtoFileModel[]>
-    import: (filePath: string) => Promise<ProtoFileModel>
+    import: (filePath: string) => Promise<{ protoId: string; services: GrpcServiceInfo[] }>
+    importFromUrl: (url: string) => Promise<{ protoId: string; services: GrpcServiceInfo[] }>
     delete: (id: string) => Promise<void>
+  }
+  sync: {
+    exportFolder: (collectionId: string, folderPath: string) => Promise<number>
+    importFolder: (folderPath: string, collectionId?: string | null) => Promise<{ collectionId: string; count: number }>
+    linkFolder: (collectionId: string, folderPath: string) => Promise<CollectionModel>
+    unlinkFolder: (collectionId: string) => Promise<CollectionModel>
+    push: (collectionId: string) => Promise<number>
+    pull: (collectionId: string) => Promise<{ count: number }>
+    startWatch: (collectionId: string) => Promise<void>
+    stopWatch: (collectionId: string) => Promise<void>
+    listWatched: () => Promise<string[]>
+  }
+  schedule: {
+    list: () => Promise<ScheduledJobModel[]>
+    save: (data: Partial<ScheduledJobModel> & { requestId: string; scheduleExpr: string }) => Promise<ScheduledJobModel>
+    delete: (id: string) => Promise<void>
+    runNow: (id: string) => Promise<void>
   }
   settings: {
     get: () => Promise<Settings>
@@ -420,6 +453,7 @@ export interface LisekAPI {
   }
   dialog: {
     openFile: (filters?: { name: string; extensions: string[] }[]) => Promise<string | null>
+    openDirectory: () => Promise<string | null>
     saveFile: (defaultPath?: string, filters?: { name: string; extensions: string[] }[]) => Promise<string | null>
   }
   fs: {

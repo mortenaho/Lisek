@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from 'uuid'
 import YAML from 'yaml'
 import SwaggerParser from '@apidevtools/swagger-parser'
 import type { KeyValue, OpenApiSpecModel, RequestModel } from '../../../shared/types'
-import { saveRequest } from './repository'
+import { saveRequest, saveEnvironment, setActiveEnvironment } from './repository'
 import { fetchImportSource, type ImportFormatHint } from './fetch-import.service'
 
 function parseImportContent(content: string, formatHint: ImportFormatHint = 'unknown'): unknown {
@@ -277,4 +277,42 @@ export function exportToOpenApi(collectionId: string, filePath: string) {
   }
 
   writeFileSync(filePath, JSON.stringify(spec, null, 2))
+}
+
+export function createEnvironmentFromSpec(specId: string, activate = false) {
+  const spec = listOpenApiSpecs().find((s) => s.id === specId)
+  if (!spec) throw new Error('OpenAPI spec not found')
+
+  const variables: KeyValue[] = spec.servers.map((url, index) => ({
+    id: uuidv4(),
+    key: index === 0 ? 'baseUrl' : `baseUrl_${index + 1}`,
+    value: url,
+    enabled: true
+  }))
+
+  const raw = spec.content.startsWith('{') ? JSON.parse(spec.content) : YAML.parse(spec.content)
+  const version = (raw as { info?: { version?: string } }).info?.version
+  if (version) {
+    variables.push({ id: uuidv4(), key: 'apiVersion', value: version, enabled: true })
+  }
+
+  const securitySchemes = (raw as { components?: { securitySchemes?: Record<string, { type?: string; scheme?: string; name?: string }> } })
+    .components?.securitySchemes
+  if (securitySchemes) {
+    for (const [name, scheme] of Object.entries(securitySchemes)) {
+      if (scheme.type === 'http' && scheme.scheme === 'bearer') {
+        variables.push({ id: uuidv4(), key: `${name}Token`, value: '', enabled: true, secret: true })
+      } else if (scheme.type === 'apiKey' && scheme.name) {
+        variables.push({ id: uuidv4(), key: scheme.name, value: '', enabled: true, secret: true })
+      }
+    }
+  }
+
+  const env = saveEnvironment({
+    name: `${spec.title} Environment`,
+    isActive: activate,
+    variables
+  })
+  if (activate) setActiveEnvironment(env.id)
+  return env
 }

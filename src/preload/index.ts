@@ -38,12 +38,14 @@ const lisek: LisekAPI = {
     insomnia: (filePath) => ipcRenderer.invoke('import:insomnia', filePath),
     insomniaFromUrl: (url) => ipcRenderer.invoke('import:insomniaUrl', url),
     har: (filePath, collectionId) => ipcRenderer.invoke('import:har', filePath, collectionId),
-    curl: (curlString, collectionId?) => ipcRenderer.invoke('import:curl', curlString, collectionId)
+    curl: (curlString, collectionId?) => ipcRenderer.invoke('import:curl', curlString, collectionId),
+    bruno: (folderPath, collectionId?) => ipcRenderer.invoke('import:bruno', folderPath, collectionId)
   },
   export: {
     postman: (collectionId, filePath) => ipcRenderer.invoke('export:postman', collectionId, filePath),
     openapi: (collectionId, filePath) => ipcRenderer.invoke('export:openapi', collectionId, filePath),
     insomnia: (collectionId, filePath) => ipcRenderer.invoke('export:insomnia', collectionId, filePath),
+    bruno: (collectionId, folderPath) => ipcRenderer.invoke('export:bruno', collectionId, folderPath),
     curl: (requestId) => ipcRenderer.invoke('export:curl', requestId),
     har: (historyId, filePath) => ipcRenderer.invoke('export:har', historyId, filePath),
     harFromRequest: (requestId, filePath) => ipcRenderer.invoke('export:harFromRequest', requestId, filePath)
@@ -61,7 +63,8 @@ const lisek: LisekAPI = {
     delete: (id) => ipcRenderer.invoke('openapi:delete', id),
     getPaths: (specId) => ipcRenderer.invoke('openapi:getPaths', specId),
     generateRequest: (specId, path, method, collectionId?) =>
-      ipcRenderer.invoke('openapi:generateRequest', specId, path, method, collectionId)
+      ipcRenderer.invoke('openapi:generateRequest', specId, path, method, collectionId),
+    createEnvironment: (specId, activate) => ipcRenderer.invoke('openapi:createEnvironment', specId, activate)
   },
   cookies: {
     list: () => ipcRenderer.invoke('cookies:list'),
@@ -109,7 +112,7 @@ const lisek: LisekAPI = {
   },
   mock: {
     getState: () => ipcRenderer.invoke('mock:getState'),
-    start: (port) => ipcRenderer.invoke('mock:start', port),
+    start: (port, seedRoute) => ipcRenderer.invoke('mock:start', port, seedRoute),
     stop: () => ipcRenderer.invoke('mock:stop'),
     addRoute: (route) => ipcRenderer.invoke('mock:addRoute', route),
     removeRoute: (id) => ipcRenderer.invoke('mock:removeRoute', id),
@@ -125,7 +128,25 @@ const lisek: LisekAPI = {
   proto: {
     list: () => ipcRenderer.invoke('proto:list'),
     import: (filePath) => ipcRenderer.invoke('grpc:loadProto', filePath),
+    importFromUrl: (url) => ipcRenderer.invoke('grpc:importProtoUrl', url),
     delete: (id) => ipcRenderer.invoke('proto:delete', id)
+  },
+  sync: {
+    exportFolder: (collectionId, folderPath) => ipcRenderer.invoke('sync:exportFolder', collectionId, folderPath),
+    importFolder: (folderPath, collectionId) => ipcRenderer.invoke('sync:importFolder', folderPath, collectionId),
+    linkFolder: (collectionId, folderPath) => ipcRenderer.invoke('sync:linkFolder', collectionId, folderPath),
+    unlinkFolder: (collectionId) => ipcRenderer.invoke('sync:unlinkFolder', collectionId),
+    push: (collectionId) => ipcRenderer.invoke('sync:push', collectionId),
+    pull: (collectionId) => ipcRenderer.invoke('sync:pull', collectionId),
+    startWatch: (collectionId) => ipcRenderer.invoke('sync:startWatch', collectionId),
+    stopWatch: (collectionId) => ipcRenderer.invoke('sync:stopWatch', collectionId),
+    listWatched: () => ipcRenderer.invoke('sync:listWatched')
+  },
+  schedule: {
+    list: () => ipcRenderer.invoke('schedule:list'),
+    save: (data) => ipcRenderer.invoke('schedule:save', data),
+    delete: (id) => ipcRenderer.invoke('schedule:delete', id),
+    runNow: (id) => ipcRenderer.invoke('schedule:runNow', id)
   },
   settings: {
     get: () => ipcRenderer.invoke('settings:get'),
@@ -133,6 +154,7 @@ const lisek: LisekAPI = {
   },
   dialog: {
     openFile: (filters?) => ipcRenderer.invoke('dialog:openFile', filters),
+    openDirectory: () => ipcRenderer.invoke('dialog:openDirectory'),
     saveFile: (defaultPath?, filters?) => ipcRenderer.invoke('dialog:saveFile', defaultPath, filters)
   },
   fs: {

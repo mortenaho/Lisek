@@ -3,6 +3,7 @@ import {
   addMockRoute,
   clearMockRoutes,
   normalizeMockPath,
+  seedDefaultRouteIfEmpty,
   startMockServer,
   stopMockServer
 } from '../src/main/services/mock-server.service'
@@ -99,6 +100,31 @@ describe('mock-server.service', () => {
     const state = await startMockServer(0)
     const res = await fetch(`${state.baseUrl}/api/hello`, { method: 'OPTIONS' })
     expect(res.status).toBe(204)
+  })
+
+  it('seeds default route when store is empty', async () => {
+    const state = seedDefaultRouteIfEmpty({
+      method: 'GET',
+      path: '/api/hello',
+      statusCode: 200,
+      body: '{"ok":true}',
+      headers: {}
+    })
+    expect(state.routes).toHaveLength(1)
+  })
+
+  it('start flow: seed then serve GET /api/hello', async () => {
+    seedDefaultRouteIfEmpty({
+      method: 'GET',
+      path: '/api/hello',
+      statusCode: 200,
+      body: '{"ok":true}',
+      headers: {}
+    })
+    const state = await startMockServer(0)
+    const res = await fetch(`${state.baseUrl}/api/hello`)
+    expect(res.status).toBe(200)
+    expect(await res.text()).toBe('{"ok":true}')
   })
 })
 

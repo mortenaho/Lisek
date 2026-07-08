@@ -255,6 +255,26 @@ export default function ImportDialog() {
           <ListItemButton onClick={() => setImportDialog(true, 'insomnia')}>
             <ListItemText primary="Insomnia" secondary=".json, .yaml, .yml — file or URL" />
           </ListItemButton>
+          <ListItemButton
+            onClick={() => {
+              void (async () => {
+                const folderPath = await window.lisek.dialog.openDirectory()
+                if (!folderPath) return
+                setLoading(true)
+                setError(null)
+                try {
+                  await window.lisek.import.bruno(folderPath)
+                  await refreshAfterCollectionImport('postman')
+                } catch (e) {
+                  setError(e instanceof Error ? e.message : 'Import failed')
+                } finally {
+                  setLoading(false)
+                }
+              })()
+            }}
+          >
+            <ListItemText primary="Bruno" secondary="Bruno collection folder (.bru)" />
+          </ListItemButton>
           <ListItemButton onClick={() => setImportDialog(true, 'curl')}>
             <ListItemText primary="cURL" secondary="Paste cURL command" />
           </ListItemButton>

@@ -11,6 +11,7 @@ import {
 } from '../services/websocket.service'
 import {
   importProtoFile,
+  importProtoFromUrl,
   invokeGrpc,
   listProtoFiles,
   deleteProtoFile,
@@ -18,7 +19,7 @@ import {
   getProtoServices
 } from '../services/grpc.service'
 import { importPostman, importPostmanFromUrl, importInsomnia, importInsomniaFromUrl, exportPostman, exportInsomnia } from '../services/import.service'
-import { importOpenApi, importOpenApiFromUrl, listOpenApiSpecs, deleteOpenApiSpec, exportToOpenApi, getOpenApiPaths, generateRequestFromSpec } from '../services/openapi.service'
+import { importOpenApi, importOpenApiFromUrl, listOpenApiSpecs, deleteOpenApiSpec, exportToOpenApi, getOpenApiPaths, generateRequestFromSpec, createEnvironmentFromSpec } from '../services/openapi.service'
 import { parseCurl, exportToCurl } from '../services/curl.service'
 import {
   clearCookieJar,
@@ -38,9 +39,29 @@ import {
   clearMockRoutes,
   getMockServerState,
   removeMockRoute,
+  seedDefaultRouteIfEmpty,
   startMockServer,
   stopMockServer
 } from '../services/mock-server.service'
+import { importBrunoCollection, exportBrunoCollection } from '../services/bruno.service'
+import {
+  exportCollectionToFolder,
+  importCollectionFromFolder,
+  linkCollectionFolder,
+  unlinkCollectionFolder,
+  pushCollectionToFolder,
+  pullCollectionFromFolder,
+  startWatchingCollection,
+  stopWatchingCollection,
+  listWatchedCollections,
+  exportRequestOnSave
+} from '../services/collection-sync.service'
+import {
+  deleteScheduledJob,
+  listScheduledJobs,
+  runScheduledJobNow,
+  saveScheduledJob
+} from '../services/schedule.service'
 import {
   listCollections,
   createCollection,
@@ -189,7 +210,12 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null) {
   ipcMain.handle('sse:disconnect', (_, connectionId) => disconnectSse(connectionId))
 
   ipcMain.handle('mock:getState', () => getMockServerState())
-  ipcMain.handle('mock:start', async (_, port?) => startMockServer(port))
+  ipcMain.handle('mock:start', async (_, port?, seedRoute?) => {
+    if (seedRoute) {
+      seedDefaultRouteIfEmpty(seedRoute)
+    }
+    return startMockServer(port)
+  })
   ipcMain.handle('mock:stop', () => stopMockServer())
   ipcMain.handle('mock:addRoute', (_, route) => addMockRoute(route))
   ipcMain.handle('mock:removeRoute', (_, id) => removeMockRoute(id))
@@ -202,7 +228,15 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null) {
 
   ipcMain.handle('requests:list', (_, collectionId?) => listRequests(collectionId))
   ipcMain.handle('requests:get', (_, id) => getRequest(id))
-  ipcMain.handle('requests:save', (_, data) => saveRequest(data))
+  ipcMain.handle('requests:save', (_, data) => {
+    const saved = saveRequest(data)
+    try {
+      exportRequestOnSave(saved)
+    } catch {
+      /* ignore sync write errors */
+    }
+    return saved
+  })
   ipcMain.handle('requests:delete', (_, id) => deleteRequest(id))
   ipcMain.handle('requests:move', (_, requestId, targetCollectionId, beforeRequestId) =>
     moveRequest(requestId, targetCollectionId ?? null, beforeRequestId ?? null)
@@ -220,6 +254,7 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null) {
   ipcMain.handle('import:postmanUrl', (_, url) => importPostmanFromUrl(url))
   ipcMain.handle('import:openapi', (_, filePath) => importOpenApi(filePath))
   ipcMain.handle('import:openapiUrl', (_, url) => importOpenApiFromUrl(url))
+  ipcMain.handle('import:bruno', (_, folderPath, collectionId) => importBrunoCollection(folderPath, collectionId ?? null))
   ipcMain.handle('import:insomnia', (_, filePath) => importInsomnia(filePath))
   ipcMain.handle('import:insomniaUrl', (_, url) => importInsomniaFromUrl(url))
   ipcMain.handle('import:har', (_, filePath, collectionId?) => importHar(filePath, collectionId ?? null))
@@ -230,6 +265,7 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null) {
 
   ipcMain.handle('export:postman', (_, collectionId, filePath) => exportPostman(collectionId, filePath))
   ipcMain.handle('export:insomnia', (_, collectionId, filePath) => exportInsomnia(collectionId, filePath))
+  ipcMain.handle('export:bruno', (_, collectionId, folderPath) => exportBrunoCollection(collectionId, folderPath))
   ipcMain.handle('export:openapi', (_, collectionId, filePath) => exportToOpenApi(collectionId, filePath))
   ipcMain.handle('export:har', (_, historyId, filePath) => exportHarFromHistory(historyId, filePath))
   ipcMain.handle('export:harFromRequest', (_, requestId, filePath) => exportHarFromRequest(requestId, filePath))
@@ -244,6 +280,9 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null) {
   ipcMain.handle('openapi:getPaths', (_, specId) => getOpenApiPaths(specId))
   ipcMain.handle('openapi:generateRequest', (_, specId, path, method, collectionId?) =>
     generateRequestFromSpec(specId, path, method, collectionId ?? null)
+  )
+  ipcMain.handle('openapi:createEnvironment', (_, specId, activate = false) =>
+    createEnvironmentFromSpec(specId, activate)
   )
 
   ipcMain.handle('cookies:list', () => listStoredCookies())
@@ -278,6 +317,7 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null) {
   ipcMain.handle('ws:disconnect', (_, connectionId) => disconnectWebSocket(connectionId))
 
   ipcMain.handle('grpc:loadProto', (_, filePath) => importProtoFile(filePath))
+  ipcMain.handle('grpc:importProtoUrl', (_, url) => importProtoFromUrl(url))
   ipcMain.handle('grpc:getServices', (_, protoId) => getProtoServices(protoId))
   ipcMain.handle('grpc:reflect', (_, target) => reflectGrpc(target))
   ipcMain.handle('grpc:invoke', (_, payload) => invokeGrpc(payload))
@@ -293,6 +333,23 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null) {
   )
   ipcMain.handle('proto:delete', (_, id) => deleteProtoFile(id))
 
+  ipcMain.handle('sync:exportFolder', (_, collectionId, folderPath) => exportCollectionToFolder(collectionId, folderPath))
+  ipcMain.handle('sync:importFolder', (_, folderPath, collectionId) =>
+    importCollectionFromFolder(folderPath, null, collectionId ?? undefined)
+  )
+  ipcMain.handle('sync:linkFolder', (_, collectionId, folderPath) => linkCollectionFolder(collectionId, folderPath))
+  ipcMain.handle('sync:unlinkFolder', (_, collectionId) => unlinkCollectionFolder(collectionId))
+  ipcMain.handle('sync:push', (_, collectionId) => pushCollectionToFolder(collectionId))
+  ipcMain.handle('sync:pull', (_, collectionId) => pullCollectionFromFolder(collectionId))
+  ipcMain.handle('sync:startWatch', (_, collectionId) => startWatchingCollection(collectionId))
+  ipcMain.handle('sync:stopWatch', (_, collectionId) => stopWatchingCollection(collectionId))
+  ipcMain.handle('sync:listWatched', () => listWatchedCollections())
+
+  ipcMain.handle('schedule:list', () => listScheduledJobs())
+  ipcMain.handle('schedule:save', (_, data) => saveScheduledJob(data))
+  ipcMain.handle('schedule:delete', (_, id) => deleteScheduledJob(id))
+  ipcMain.handle('schedule:runNow', (_, id) => runScheduledJobNow(id))
+
   ipcMain.handle('settings:get', () => getSettings())
   ipcMain.handle('settings:set', (_, partial) => setSettings(partial))
 
@@ -301,6 +358,11 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null) {
       properties: ['openFile'],
       filters: filters || [{ name: 'All Files', extensions: ['*'] }]
     })
+    return result.canceled ? null : result.filePaths[0]
+  })
+
+  ipcMain.handle('dialog:openDirectory', async () => {
+    const result = await dialog.showOpenDialog({ properties: ['openDirectory'] })
     return result.canceled ? null : result.filePaths[0]
   })
 

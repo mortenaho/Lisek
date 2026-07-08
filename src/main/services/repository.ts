@@ -60,6 +60,7 @@ type CollectionRow = {
   pinned?: number
   variables_json: string
   description?: string
+  sync_path?: string
   created_at: number
 }
 
@@ -177,6 +178,7 @@ function rowToCollection(r: CollectionRow): CollectionModel {
     pinned: Boolean(r.pinned ?? 0),
     variables: JSON.parse(r.variables_json),
     description: r.description || '',
+    syncPath: r.sync_path || '',
     createdAt: r.created_at
   }
 }
@@ -193,9 +195,10 @@ export function createCollection(data: Partial<CollectionModel>): CollectionMode
   const sortOrder = data.sortOrder ?? nextCollectionSortOrder(parentId)
   const pinned = data.pinned ?? false
   const description = data.description ?? ''
+  const syncPath = data.syncPath ?? ''
   runQuery(
-    'INSERT INTO collections (id, name, parent_id, sort_order, pinned, variables_json, description, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-    [id, data.name || 'New Collection', parentId, sortOrder, pinned ? 1 : 0, JSON.stringify(data.variables || []), description, now]
+    'INSERT INTO collections (id, name, parent_id, sort_order, pinned, variables_json, description, sync_path, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    [id, data.name || 'New Collection', parentId, sortOrder, pinned ? 1 : 0, JSON.stringify(data.variables || []), description, syncPath, now]
   )
   return {
     id,
@@ -205,6 +208,7 @@ export function createCollection(data: Partial<CollectionModel>): CollectionMode
     pinned,
     variables: data.variables || [],
     description,
+    syncPath,
     createdAt: now
   }
 }
@@ -217,9 +221,10 @@ export function updateCollection(id: string, data: Partial<CollectionModel>): Co
   const pinned = data.pinned !== undefined ? data.pinned : Boolean(existing.pinned ?? 0)
   const variablesJson = data.variables !== undefined ? JSON.stringify(data.variables) : existing.variables_json
   const description = data.description !== undefined ? data.description : (existing.description || '')
+  const syncPath = data.syncPath !== undefined ? data.syncPath : (existing.sync_path || '')
   runQuery(
-    'UPDATE collections SET name = ?, parent_id = ?, sort_order = ?, pinned = ?, variables_json = ?, description = ? WHERE id = ?',
-    [name, parentId, sortOrder, pinned ? 1 : 0, variablesJson, description, id]
+    'UPDATE collections SET name = ?, parent_id = ?, sort_order = ?, pinned = ?, variables_json = ?, description = ?, sync_path = ? WHERE id = ?',
+    [name, parentId, sortOrder, pinned ? 1 : 0, variablesJson, description, syncPath, id]
   )
   return {
     id,
@@ -229,6 +234,7 @@ export function updateCollection(id: string, data: Partial<CollectionModel>): Co
     pinned,
     variables: JSON.parse(variablesJson),
     description,
+    syncPath,
     createdAt: existing.created_at
   }
 }

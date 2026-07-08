@@ -76,7 +76,17 @@ export default function MockServerDialog({ open, onClose }: Props) {
   const startServer = async () => {
     setError(null)
     try {
-      const next = await window.lisek.mock.start(parseInt(port, 10) || 0)
+      const seedRoute =
+        state.routes.length === 0
+          ? {
+              method,
+              path,
+              statusCode: parseInt(statusCode, 10) || 200,
+              body,
+              headers: { 'content-type': 'application/json' }
+            }
+          : undefined
+      const next = await window.lisek.mock.start(parseInt(port, 10) || 0, seedRoute)
       setState(next)
       if (next.port) setPort(String(next.port))
     } catch (err) {
@@ -131,7 +141,7 @@ export default function MockServerDialog({ open, onClose }: Props) {
         </Box>
 
         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
-          Add routes first, then start the server. Request the full URL in Lisek, e.g.{' '}
+          Start adds the route below automatically if none exist. Request the full URL, e.g.{' '}
           <Box component="span" sx={{ fontFamily: 'monospace' }}>
             http://127.0.0.1:4010/api/hello
           </Box>

@@ -33,6 +33,8 @@ import TuneIcon from '@mui/icons-material/Tune'
 import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined'
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator'
 import PlayArrowIcon from '@mui/icons-material/PlayArrow'
+import ScheduleIcon from '@mui/icons-material/Schedule'
+import SyncIcon from '@mui/icons-material/Sync'
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { useAppStore } from '../../stores/appStore'
 import ConfirmDialog from '../../components/ConfirmDialog'
@@ -40,6 +42,7 @@ import PromptDialog from '../../components/PromptDialog'
 import CollectionVariablesDialog from './CollectionVariablesDialog'
 import CollectionDescriptionDialog from './CollectionDescriptionDialog'
 import CollectionRunnerDialog from './CollectionRunnerDialog'
+import ScheduleRequestDialog from './ScheduleRequestDialog'
 import SidebarPanelHeader from '../../components/SidebarPanelHeader'
 import { useCollectionDragDrop } from './useCollectionDragDrop'
 import { COMPACT } from '../../theme/compact'
@@ -267,6 +270,7 @@ export default function CollectionsPanel() {
   const setCollectionPinned = useAppStore((s) => s.setCollectionPinned)
   const setRequestPinned = useAppStore((s) => s.setRequestPinned)
   const loadRequests = useAppStore((s) => s.loadRequests)
+  const loadCollections = useAppStore((s) => s.loadCollections)
   const setImportDialog = useAppStore((s) => s.setImportDialog)
 
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
@@ -277,6 +281,7 @@ export default function CollectionsPanel() {
   const [variablesCollection, setVariablesCollection] = useState<CollectionModel | null>(null)
   const [descriptionCollection, setDescriptionCollection] = useState<CollectionModel | null>(null)
   const [runnerCollection, setRunnerCollection] = useState<CollectionModel | null>(null)
+  const [scheduleRequest, setScheduleRequest] = useState<RequestModel | null>(null)
   const editInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -407,10 +412,16 @@ export default function CollectionsPanel() {
     setNewCollectionOpen(false)
   }
 
-  const exportCollection = async (collectionId: string, format: 'postman' | 'openapi' | 'insomnia') => {
+  const exportCollection = async (collectionId: string, format: 'postman' | 'openapi' | 'insomnia' | 'bruno') => {
     setMenuAnchor(null)
     const col = collections.find((c) => c.id === collectionId)
     const safeName = (col?.name || 'collection').replace(/[^\w.-]+/g, '_')
+    if (format === 'bruno') {
+      const folderPath = await window.lisek.dialog.openDirectory()
+      if (!folderPath) return
+      await window.lisek.export.bruno(collectionId, folderPath)
+      return
+    }
     const filePath = await window.lisek.dialog.saveFile(`${safeName}.json`, [
       { name: 'JSON', extensions: ['json'] },
       { name: 'YAML', extensions: ['yaml', 'yml'] }
@@ -423,6 +434,26 @@ export default function CollectionsPanel() {
     } else {
       await window.lisek.export.openapi(collectionId, filePath)
     }
+  }
+
+  const linkCollectionFolder = async (collectionId: string) => {
+    setMenuAnchor(null)
+    const folderPath = await window.lisek.dialog.openDirectory()
+    if (!folderPath) return
+    await window.lisek.sync.linkFolder(collectionId, folderPath)
+    await window.lisek.sync.exportFolder(collectionId, folderPath)
+    await loadCollections()
+  }
+
+  const syncCollectionFolder = async (collectionId: string, action: 'push' | 'pull' | 'watch' | 'unwatch') => {
+    setMenuAnchor(null)
+    if (action === 'push') await window.lisek.sync.push(collectionId)
+    if (action === 'pull') {
+      await window.lisek.sync.pull(collectionId)
+      await loadRequests()
+    }
+    if (action === 'watch') await window.lisek.sync.startWatch(collectionId)
+    if (action === 'unwatch') await window.lisek.sync.stopWatch(collectionId)
   }
 
   const renderRequest = (req: RequestModel, depth: number) => {
@@ -747,7 +778,50 @@ export default function CollectionsPanel() {
               </ListItemIcon>
               Export as Insomnia
             </MenuItem>
+            <MenuItem onClick={() => void exportCollection(menuAnchor.target.item.id, 'bruno')}>
+              <ListItemIcon>
+                <FileDownloadIcon fontSize="small" />
+              </ListItemIcon>
+              Export as Bruno
+            </MenuItem>
+            <MenuItem onClick={() => void linkCollectionFolder(menuAnchor.target.item.id)}>
+              <ListItemIcon>
+                <SyncIcon fontSize="small" />
+              </ListItemIcon>
+              Link folder (Git sync)
+            </MenuItem>
+            <MenuItem onClick={() => void syncCollectionFolder(menuAnchor.target.item.id, 'push')}>
+              <ListItemIcon>
+                <SyncIcon fontSize="small" />
+              </ListItemIcon>
+              Push to folder
+            </MenuItem>
+            <MenuItem onClick={() => void syncCollectionFolder(menuAnchor.target.item.id, 'pull')}>
+              <ListItemIcon>
+                <SyncIcon fontSize="small" />
+              </ListItemIcon>
+              Pull from folder
+            </MenuItem>
+            <MenuItem onClick={() => void syncCollectionFolder(menuAnchor.target.item.id, 'watch')}>
+              <ListItemIcon>
+                <SyncIcon fontSize="small" />
+              </ListItemIcon>
+              Watch folder
+            </MenuItem>
           </>
+        )}
+        {menuAnchor?.target.type === 'request' && (
+          <MenuItem
+            onClick={() => {
+              setScheduleRequest(menuAnchor.target.item as RequestModel)
+              closeMenu()
+            }}
+          >
+            <ListItemIcon>
+              <ScheduleIcon fontSize="small" />
+            </ListItemIcon>
+            Schedule request
+          </MenuItem>
         )}
         <MenuItem
           onClick={() => menuAnchor && void togglePin(menuAnchor.target)}
@@ -841,6 +915,11 @@ export default function CollectionsPanel() {
         open={!!runnerCollection}
         collection={runnerCollection}
         onClose={() => setRunnerCollection(null)}
+      />
+      <ScheduleRequestDialog
+        open={!!scheduleRequest}
+        request={scheduleRequest}
+        onClose={() => setScheduleRequest(null)}
       />
     </Box>
   )

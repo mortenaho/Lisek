@@ -1,10 +1,12 @@
 import * as grpc from '@grpc/grpc-js'
 import * as protoLoader from '@grpc/proto-loader'
-import { readFileSync, existsSync } from 'fs'
+import { readFileSync, existsSync, writeFileSync, mkdirSync } from 'fs'
 import { dirname, basename, join } from 'path'
+import { app } from 'electron'
 import { v4 as uuidv4 } from 'uuid'
 import { getOne, runQuery, getAll } from '../db'
 import type { GrpcCallType, GrpcServiceInfo, KeyValue } from '../../../shared/types'
+import { fetchImportSource } from './fetch-import.service'
 
 const loadedPackages = new Map<string, grpc.GrpcObject>()
 
@@ -24,6 +26,18 @@ export function importProtoFile(filePath: string) {
 
   const services = loadProtoFromPath(filePath, id)
   return { protoId: id, services }
+}
+
+export async function importProtoFromUrl(url: string) {
+  const fetched = await fetchImportSource(url)
+  const protoDir = join(app.getPath('userData'), 'protos')
+  mkdirSync(protoDir, { recursive: true })
+  const safeName = fetched.sourceLabel.toLowerCase().endsWith('.proto')
+    ? fetched.sourceLabel
+    : `${fetched.sourceLabel}.proto`
+  const filePath = join(protoDir, safeName.replace(/[^\w.-]+/g, '_'))
+  writeFileSync(filePath, fetched.content, 'utf-8')
+  return importProtoFile(filePath)
 }
 
 function loadProtoFromPath(filePath: string, protoId: string): GrpcServiceInfo[] {

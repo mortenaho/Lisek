@@ -157,13 +157,26 @@ export function isHtmlResponse(body: string, contentType = ''): boolean {
   return detectResponseBody(body, contentType).language === 'html'
 }
 
-export function detectResponseBody(body: string, contentType = ''): ResponseBodyView {
+export function detectResponseBody(
+  body: string,
+  contentType = '',
+  bodyEncoding: 'text' | 'base64' = 'text'
+): ResponseBodyView {
+  const ct = contentType.toLowerCase()
+  if (bodyEncoding === 'base64') {
+    if (ct.includes('application/pdf')) {
+      return { language: 'pdf', label: 'PDF', formatted: body, data: null }
+    }
+    if (ct.startsWith('image/')) {
+      return { language: 'image', label: 'Image', formatted: body, data: null }
+    }
+  }
+
   const parsed = parseResponseJson(body)
   if (parsed) {
     return { language: 'json', label: 'JSON', formatted: parsed.formatted, data: parsed.data }
   }
 
-  const ct = contentType.toLowerCase()
   const trimmed = body.trim()
 
   if (ct.includes('html') || /^<!doctype html/i.test(trimmed) || /^<html[\s>]/i.test(trimmed)) {

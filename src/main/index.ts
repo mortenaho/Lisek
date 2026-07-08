@@ -5,6 +5,7 @@ import { initDatabase } from './db'
 import { registerIpcHandlers } from './ipc'
 import { seedFreshInstall, seedScreenshotDemo } from './services/repository'
 import { configureCookieJar } from './services/cookie-jar.service'
+import { initScheduledJobs } from './services/schedule.service'
 import { APP_INFO } from '../../shared/appInfo'
 
 let mainWindow: BrowserWindow | null = null
@@ -141,6 +142,7 @@ app.whenReady().then(async () => {
     seedFreshInstall()
   }
   registerIpcHandlers(() => mainWindow)
+  initScheduledJobs()
   createWindow()
 
   app.on('activate', () => {
