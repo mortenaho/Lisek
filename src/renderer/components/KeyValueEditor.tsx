@@ -11,6 +11,8 @@ import {
 import AddIcon from '@mui/icons-material/Add'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import AttachFileIcon from '@mui/icons-material/AttachFile'
+import LockIcon from '@mui/icons-material/Lock'
+import LockOpenIcon from '@mui/icons-material/LockOpen'
 import { memo, useCallback, useMemo } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 import type { KeyValue } from '@shared/types'
@@ -28,12 +30,14 @@ interface Props {
   emptyHint?: string
   keyPlaceholder?: string
   valuePlaceholder?: string
+  allowSecrets?: boolean
 }
 
 interface RowProps {
   item: KeyValue
   index: number
   allowFiles: boolean
+  allowSecrets: boolean
   keyPlaceholder: string
   valuePlaceholder: string
   onFieldChange: (index: number, field: keyof KeyValue, value: string | boolean) => void
@@ -45,17 +49,26 @@ const KeyValueRow = memo(function KeyValueRow({
   item,
   index,
   allowFiles,
+  allowSecrets,
   keyPlaceholder,
   valuePlaceholder,
   onFieldChange,
   onPickFile,
   onRemove
 }: RowProps) {
+  const gridColumns = allowFiles
+    ? allowSecrets
+      ? '28px 1fr 1fr auto auto'
+      : '28px 1fr 1fr auto'
+    : allowSecrets
+      ? '28px 1fr 1fr 32px 32px'
+      : '28px 1fr 1fr 32px'
+
   return (
     <Box
       sx={{
         display: 'grid',
-        gridTemplateColumns: allowFiles ? '28px 1fr 1fr auto' : '28px 1fr 1fr 32px',
+        gridTemplateColumns: gridColumns,
         gap: 0.5,
         alignItems: 'center',
         px: 0.75,
@@ -108,6 +121,7 @@ const KeyValueRow = memo(function KeyValueRow({
           size="small"
           fullWidth
           placeholder={valuePlaceholder}
+          type={item.secret ? 'password' : 'text'}
           value={item.value}
           onChange={(e) => {
             applyControlledInputChange(e.target, item.value, e.target.value, (v) =>
@@ -119,6 +133,19 @@ const KeyValueRow = memo(function KeyValueRow({
             input: { sx: COMPACT.monoInput }
           }}
         />
+      )}
+
+      {allowSecrets && (
+        <Tooltip title={item.secret ? 'Secret (masked in exports)' : 'Mark as secret'}>
+          <IconButton
+            size="small"
+            onClick={() => onFieldChange(index, 'secret', !item.secret)}
+            sx={COMPACT.iconBtn}
+            color={item.secret ? 'warning' : 'default'}
+          >
+            {item.secret ? <LockIcon sx={COMPACT.icon} /> : <LockOpenIcon sx={COMPACT.icon} />}
+          </IconButton>
+        </Tooltip>
       )}
 
       <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
@@ -149,9 +176,17 @@ function KeyValueEditor({
   emptyTitle = 'No entries yet',
   emptyHint = 'Add key-value pairs below',
   keyPlaceholder = 'Key',
-  valuePlaceholder = 'Value'
+  valuePlaceholder = 'Value',
+  allowSecrets = false
 }: Props) {
   const enabledCount = useMemo(() => items.filter((i) => i.enabled && i.key.trim()).length, [items])
+  const gridColumns = allowFiles
+    ? allowSecrets
+      ? '28px 1fr 1fr auto auto'
+      : '28px 1fr 1fr auto'
+    : allowSecrets
+      ? '28px 1fr 1fr 32px 32px'
+      : '28px 1fr 1fr 32px'
 
   const onFieldChange = useCallback(
     (index: number, field: keyof KeyValue, value: string | boolean) => {
@@ -273,7 +308,7 @@ function KeyValueEditor({
           <Box
             sx={{
               display: 'grid',
-              gridTemplateColumns: allowFiles ? '28px 1fr 1fr auto' : '28px 1fr 1fr 32px',
+              gridTemplateColumns: gridColumns,
               gap: 0.5,
               alignItems: 'center',
               px: 0.75,
@@ -299,6 +334,7 @@ function KeyValueEditor({
               item={item}
               index={i}
               allowFiles={allowFiles}
+              allowSecrets={allowSecrets}
               keyPlaceholder={keyPlaceholder}
               valuePlaceholder={valuePlaceholder}
               onFieldChange={onFieldChange}

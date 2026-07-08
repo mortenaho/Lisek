@@ -11,6 +11,7 @@ export interface KeyValue {
   value: string
   enabled: boolean
   filePath?: string
+  secret?: boolean
 }
 
 export interface AuthConfig {
@@ -55,6 +56,35 @@ export interface CollectionRunResult {
   passed: boolean
   error?: string
   durationMs: number
+  iteration?: number
+}
+
+export interface CollectionRunOptions {
+  stopOnFailure?: boolean
+  iterations?: number
+  delayMs?: number
+}
+
+export interface CollectionRunReport {
+  collectionId: string
+  collectionName: string
+  startedAt: number
+  finishedAt: number
+  iterations: number
+  delayMs: number
+  results: CollectionRunResult[]
+  passed: number
+  failed: number
+}
+
+export interface WorkspaceBackup {
+  version: 1
+  exportedAt: number
+  collections: CollectionModel[]
+  requests: RequestModel[]
+  environments: EnvironmentModel[]
+  openapiSpecs: OpenApiSpecModel[]
+  protoFiles: ProtoFileModel[]
 }
 
 export interface RequestModel {
@@ -88,6 +118,8 @@ export interface RequestModel {
   grpcMessage: string
   sortOrder: number
   pinned: boolean
+  tags?: string[]
+  notes?: string
   createdAt: number
   updatedAt: number
   lastResponse?: HttpResponse | null
@@ -101,6 +133,7 @@ export interface CollectionModel {
   sortOrder: number
   pinned: boolean
   variables: KeyValue[]
+  description?: string
   createdAt: number
 }
 
@@ -212,6 +245,10 @@ export interface Settings {
   timeoutMs: number
   followRedirects: boolean
   theme: 'light' | 'dark'
+  proxyUrl?: string
+  runnerIterations?: number
+  runnerDelayMs?: number
+  autoUpdate?: boolean
 }
 
 export interface AppInfo {
@@ -267,7 +304,14 @@ export interface LisekAPI {
   export: {
     postman: (collectionId: string, filePath: string) => Promise<void>
     openapi: (collectionId: string, filePath: string) => Promise<void>
+    insomnia: (collectionId: string, filePath: string) => Promise<void>
     curl: (requestId: string) => Promise<string>
+    har: (historyId: string, filePath: string) => Promise<void>
+    harFromRequest: (requestId: string, filePath: string) => Promise<void>
+  }
+  workspace: {
+    export: (filePath: string) => Promise<void>
+    import: (filePath: string) => Promise<void>
   }
   openapi: {
     list: () => Promise<OpenApiSpecModel[]>
@@ -282,7 +326,8 @@ export interface LisekAPI {
     clearDomain: (domain: string) => Promise<void>
   }
   runner: {
-    runCollection: (collectionId: string, stopOnFailure?: boolean) => Promise<CollectionRunResult[]>
+    runCollection: (collectionId: string, options?: CollectionRunOptions) => Promise<CollectionRunResult[]>
+    exportReport: (report: CollectionRunReport, filePath: string, format: 'json' | 'html') => Promise<void>
   }
   ws: {
     connect: (url: string, headers: KeyValue[]) => Promise<string>

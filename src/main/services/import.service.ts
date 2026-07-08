@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid'
 import YAML from 'yaml'
 import { getAll, getOne, runQuery } from '../db'
 import type { AuthConfig, AuthType, KeyValue, RequestModel } from '../../../shared/types'
+import { maskSecretKeyValues, maskSecretValue } from '../../../shared/secretExport'
 import { rowToRequest, saveRequest } from './repository'
 import { fetchImportSource, type ImportFormatHint } from './fetch-import.service'
 
@@ -449,9 +450,9 @@ export function exportPostman(collectionId: string, filePath: string) {
       schema: 'https://schema.getpostman.com/json/collection/v2.1.0/collection.json'
     },
     item,
-    variable: JSON.parse(col?.variables_json || '[]').map((v: KeyValue) => ({
+    variable: maskSecretKeyValues(JSON.parse(col?.variables_json || '[]')).map((v: KeyValue) => ({
       key: v.key,
-      value: v.value
+      value: maskSecretValue(v)
     }))
   }
 
@@ -479,22 +480,136 @@ function buildPostmanItem(req: RequestModel): PostmanItem {
   if (req.preRequestScript) events.push({ listen: 'prerequest', script: { exec: req.preRequestScript.split('\n') } })
   if (req.testScript) events.push({ listen: 'test', script: { exec: req.testScript.split('\n') } })
 
+  const headers = maskSecretKeyValues(req.headers)
+  const params = maskSecretKeyValues(req.params)
+  const formData = maskSecretKeyValues(req.formData)
+  const urlEncoded = maskSecretKeyValues(req.urlEncoded)
+
   return {
     name: req.name,
     event: events.length > 0 ? events : undefined,
     request: {
       method: req.method,
-      header: req.headers.map((h) => ({ key: h.key, value: h.value, disabled: !h.enabled })),
-      url: { raw: req.url, query: req.params.map((p) => ({ key: p.key, value: p.value, disabled: !p.enabled })) },
+      header: headers.map((h) => ({ key: h.key, value: maskSecretValue(h), disabled: !h.enabled })),
+      url: { raw: req.url, query: params.map((p) => ({ key: p.key, value: maskSecretValue(p), disabled: !p.enabled })) },
       body:
         req.bodyType === 'none'
           ? undefined
           : {
               mode: req.bodyType === 'raw' ? 'raw' : req.bodyType === 'form-data' ? 'formdata' : 'urlencoded',
               raw: req.bodyRaw,
-              formdata: req.formData.map((f) => ({ key: f.key, value: f.value, disabled: !f.enabled })),
-              urlencoded: req.urlEncoded.map((u) => ({ key: u.key, value: u.value, disabled: !u.enabled }))
+              formdata: formData.map((f) => ({ key: f.key, value: maskSecretValue(f), disabled: !f.enabled })),
+              urlencoded: urlEncoded.map((u) => ({ key: u.key, value: maskSecretValue(u), disabled: !u.enabled }))
             }
     }
+  }
+}
+
+export function exportInsomnia(collectionId: string, filePath: string) {
+  const col = getOne<{ name: string; variables_json: string }>('SELECT name, variables_json FROM collections WHERE id = ?', [
+    collectionId
+  ])
+  const allCols = getAll<{ id: string; name: string; parent_id: string | null; sort_order: number }>(
+    'SELECT id, name, parent_id, sort_order FROM collections'
+  )
+  const allReqs = getAll<Parameters<typeof rowToRequest>[0]>('SELECT * FROM requests')
+
+  const workspaceId = uuidv4()
+  const resources: Record<string, unknown>[] = [
+    {
+      _type: 'export',
+      __export_format: 4,
+      __export_date: new Date().toISOString(),
+      __export_source: 'lisek'
+    },
+    {
+      _id: workspaceId,
+      _type: 'workspace',
+      name: col?.name || 'Export',
+      description: ''
+    }
+  ]
+
+  const idMap = new Map<string, string>()
+  idMap.set(collectionId, workspaceId)
+
+  const childCollections = allCols
+    .filter((c) => c.parent_id === collectionId || isDescendant(c.id, collectionId, allCols))
+    .sort((a, b) => a.sort_order - b.sort_order)
+
+  for (const folder of childCollections) {
+    const insomniaId = uuidv4()
+    idMap.set(folder.id, insomniaId)
+    const parentKey = folder.parent_id === collectionId ? workspaceId : idMap.get(folder.parent_id || '') || workspaceId
+    resources.push({
+      _id: insomniaId,
+      _type: 'request_group',
+      parentId: parentKey,
+      name: folder.name,
+      metaSortKey: folder.sort_order
+    })
+  }
+
+  const collectionIds = new Set([collectionId, ...childCollections.map((c) => c.id)])
+  const requests = allReqs.filter((r) => r.collection_id && collectionIds.has(r.collection_id))
+
+  for (const row of requests) {
+    const req = rowToRequest(row)
+    const parentId = req.collectionId === collectionId ? workspaceId : idMap.get(req.collectionId || '') || workspaceId
+    resources.push(buildInsomniaRequest(req, parentId))
+  }
+
+  const variables = maskSecretKeyValues(JSON.parse(col?.variables_json || '[]'))
+  for (const v of variables) {
+    if (!v.key) continue
+    resources.push({
+      _id: uuidv4(),
+      _type: 'environment',
+      parentId: workspaceId,
+      name: 'Collection Variables',
+      data: { [v.key]: maskSecretValue(v) },
+      dataPropertyOrder: { '&': [v.key] }
+    })
+  }
+
+  writeFileSync(filePath, JSON.stringify({ resources }, null, 2), 'utf-8')
+}
+
+function isDescendant(
+  id: string,
+  ancestorId: string,
+  allCols: { id: string; parent_id: string | null }[]
+): boolean {
+  let current = allCols.find((c) => c.id === id)
+  while (current?.parent_id) {
+    if (current.parent_id === ancestorId) return true
+    current = allCols.find((c) => c.id === current!.parent_id)
+  }
+  return false
+}
+
+function buildInsomniaRequest(req: RequestModel, parentId: string) {
+  const headers = maskSecretKeyValues(req.headers)
+  const params = maskSecretKeyValues(req.params)
+
+  return {
+    _id: uuidv4(),
+    _type: 'request',
+    parentId,
+    name: req.name,
+    method: req.method,
+    url: req.url,
+    headers: headers
+      .filter((h) => h.key)
+      .map((h) => ({ name: h.key, value: maskSecretValue(h), disabled: !h.enabled })),
+    parameters: params
+      .filter((p) => p.key)
+      .map((p) => ({ name: p.key, value: maskSecretValue(p), disabled: !p.enabled })),
+    body:
+      req.bodyType === 'raw' && req.bodyRaw
+        ? { mimeType: req.bodyRawContentType || 'application/json', text: req.bodyRaw }
+        : undefined,
+    preRequestScript: req.preRequestScript || undefined,
+    tests: req.testScript || undefined
   }
 }

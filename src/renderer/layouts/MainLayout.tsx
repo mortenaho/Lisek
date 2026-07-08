@@ -9,7 +9,7 @@ import {
 import SettingsIcon from '@mui/icons-material/Settings'
 import Brightness4Icon from '@mui/icons-material/Brightness4'
 import Brightness7Icon from '@mui/icons-material/Brightness7'
-import { memo, useCallback, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { useAppStore } from '../stores/appStore'
 import CollectionsPanel from '../features/collections/CollectionsPanel'
 import HistoryPanel from '../features/history/HistoryPanel'
@@ -21,6 +21,8 @@ import ResponsePanel from '../features/response/ResponsePanel'
 import ImportDialog from '../features/import/ImportDialog'
 import CurlSnippetDialog from '../features/snippets/CurlSnippetDialog'
 import SettingsDialog from '../features/settings/SettingsDialog'
+import ShortcutsDialog from '../features/settings/ShortcutsDialog'
+import CommandPalette from '../features/search/CommandPalette'
 import CookiesDialog from '../features/settings/CookiesDialog'
 import AboutDialog from '../features/about/AboutDialog'
 import ResizeHandle, { clamp, readStoredSize, storeSize } from '../components/ResizeHandle'
@@ -49,6 +51,10 @@ export default function MainLayout() {
   const currentTheme = useAppStore((s) => s.themeMode)
   const setImportDialog = useAppStore((s) => s.setImportDialog)
   const setSnippetOpen = useAppStore((s) => s.setSnippetOpen)
+  const setCommandPaletteOpen = useAppStore((s) => s.setCommandPaletteOpen)
+  const setShortcutsOpen = useAppStore((s) => s.setShortcutsOpen)
+  const shortcutsOpen = useAppStore((s) => s.shortcutsOpen)
+  const closeActiveTab = useAppStore((s) => s.closeActiveTab)
   const activeEnvName = useAppStore((s) => s.environments.find((e) => e.isActive)?.name ?? null)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [aboutOpen, setAboutOpen] = useState(false)
@@ -90,6 +96,29 @@ export default function MainLayout() {
     setResponseWidth(width)
     storeSize(STORAGE_RESPONSE, width)
   }, [])
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement
+      const typing =
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable
+
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        setCommandPaletteOpen(true)
+        return
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'w' && !typing) {
+        e.preventDefault()
+        closeActiveTab()
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [setCommandPaletteOpen, closeActiveTab])
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', bgcolor: 'background.default' }}>
@@ -253,7 +282,10 @@ export default function MainLayout() {
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
         onShowAbout={() => setAboutOpen(true)}
+        onShowShortcuts={() => setShortcutsOpen(true)}
       />
+      <ShortcutsDialog open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
+      <CommandPalette />
       <AboutDialog open={aboutOpen} onClose={() => setAboutOpen(false)} />
     </Box>
   )

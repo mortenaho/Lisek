@@ -12,6 +12,8 @@ import {
   Typography,
   Divider
 } from '@mui/material'
+import LockIcon from '@mui/icons-material/Lock'
+import LockOpenIcon from '@mui/icons-material/LockOpen'
 import AddIcon from '@mui/icons-material/Add'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import CloseIcon from '@mui/icons-material/Close'
@@ -42,7 +44,7 @@ export default function CollectionVariablesDialog({ open, collection, onClose }:
     onClose()
   }
 
-  const updateVar = (index: number, field: 'key' | 'value', value: string) => {
+  const updateVar = (index: number, field: 'key' | 'value' | 'secret', value: string | boolean) => {
     setVariables((vars) => vars.map((row, i) => (i === index ? { ...row, [field]: value } : row)))
   }
 
@@ -83,6 +85,7 @@ export default function CollectionVariablesDialog({ open, collection, onClose }:
               <TextField
                 size="small"
                 placeholder="Value"
+                type={v.secret ? 'password' : 'text'}
                 value={v.value}
                 onChange={(e) =>
                   applyControlledInputChange(e.target, v.value, e.target.value, (val) =>
@@ -91,6 +94,13 @@ export default function CollectionVariablesDialog({ open, collection, onClose }:
                 }
                 sx={{ flex: 1.5 }}
               />
+              <IconButton
+                size="small"
+                color={v.secret ? 'warning' : 'default'}
+                onClick={() => updateVar(i, 'secret', !v.secret)}
+              >
+                {v.secret ? <LockIcon fontSize="small" /> : <LockOpenIcon fontSize="small" />}
+              </IconButton>
               <IconButton size="small" onClick={() => removeVar(i)}>
                 <DeleteOutlineIcon fontSize="small" />
               </IconButton>

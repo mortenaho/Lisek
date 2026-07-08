@@ -17,7 +17,7 @@ import {
   reflectGrpc,
   getProtoServices
 } from '../services/grpc.service'
-import { importPostman, importPostmanFromUrl, importInsomnia, importInsomniaFromUrl, exportPostman } from '../services/import.service'
+import { importPostman, importPostmanFromUrl, importInsomnia, importInsomniaFromUrl, exportPostman, exportInsomnia } from '../services/import.service'
 import { importOpenApi, importOpenApiFromUrl, listOpenApiSpecs, deleteOpenApiSpec, exportToOpenApi, getOpenApiPaths, generateRequestFromSpec } from '../services/openapi.service'
 import { parseCurl, exportToCurl } from '../services/curl.service'
 import {
@@ -25,7 +25,9 @@ import {
   clearCookiesByDomain,
   listStoredCookies
 } from '../services/cookie-jar.service'
-import { runCollection } from '../services/runner.service'
+import { runCollection, exportRunnerReport } from '../services/runner.service'
+import { exportWorkspace, importWorkspace } from '../services/workspace.service'
+import { exportHarFromHistory, exportHarFromRequest } from '../services/har.service'
 import {
   listCollections,
   createCollection,
@@ -47,7 +49,7 @@ import {
   clearHistory,
   createEmptyRequest
 } from '../services/repository'
-import type { HttpRequestPayload } from '../../../shared/types'
+import type { CollectionRunOptions, CollectionRunReport, HttpRequestPayload } from '../../../shared/types'
 import { APP_INFO } from '../../../shared/appInfo'
 import { resolveCollectionVariables } from '../../../shared/collectionVariables'
 
@@ -113,7 +115,8 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null) {
     const response = await sendHttpRequest(processedPayload, envVars, collectionVars, {
       sslVerify: settings.sslVerify,
       timeoutMs: settings.timeoutMs,
-      followRedirects: settings.followRedirects
+      followRedirects: settings.followRedirects,
+      proxyUrl: settings.proxyUrl
     })
 
     testResults = [...preRequestTestResults]
@@ -189,7 +192,10 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null) {
   })
 
   ipcMain.handle('export:postman', (_, collectionId, filePath) => exportPostman(collectionId, filePath))
+  ipcMain.handle('export:insomnia', (_, collectionId, filePath) => exportInsomnia(collectionId, filePath))
   ipcMain.handle('export:openapi', (_, collectionId, filePath) => exportToOpenApi(collectionId, filePath))
+  ipcMain.handle('export:har', (_, historyId, filePath) => exportHarFromHistory(historyId, filePath))
+  ipcMain.handle('export:harFromRequest', (_, requestId, filePath) => exportHarFromRequest(requestId, filePath))
   ipcMain.handle('export:curl', (_, requestId) => {
     const req = getRequest(requestId)
     if (!req) throw new Error('Request not found')
@@ -207,14 +213,22 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null) {
   ipcMain.handle('cookies:clearAll', () => clearCookieJar())
   ipcMain.handle('cookies:clearDomain', (_, domain) => clearCookiesByDomain(domain))
 
-  ipcMain.handle('runner:runCollection', async (_, collectionId, stopOnFailure = false) => {
+  ipcMain.handle('workspace:export', (_, filePath) => exportWorkspace(filePath))
+  ipcMain.handle('workspace:import', (_, filePath) => importWorkspace(filePath))
+
+  ipcMain.handle('runner:runCollection', async (_, collectionId, options: CollectionRunOptions = {}) => {
     const settings = getSettings()
     return runCollection(collectionId, {
       sslVerify: settings.sslVerify,
       timeoutMs: settings.timeoutMs,
       followRedirects: settings.followRedirects,
-      stopOnFailure
+      proxyUrl: settings.proxyUrl,
+      ...options
     })
+  })
+
+  ipcMain.handle('runner:exportReport', (_, report: CollectionRunReport, filePath: string, format: 'json' | 'html') => {
+    exportRunnerReport(report, filePath, format)
   })
 
   ipcMain.handle('ws:connect', async (_, url, headers) => {

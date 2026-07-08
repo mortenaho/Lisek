@@ -15,6 +15,7 @@ import {
   ToggleButton,
   ToggleButtonGroup
 } from '@mui/material'
+import CloseIcon from '@mui/icons-material/Close'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import SendIcon from '@mui/icons-material/Send'
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
@@ -526,10 +527,76 @@ function RequestBuilderForm({
   )
 }
 
+function RequestTabBar() {
+  const tabs = useAppStore((s) => s.requestTabs)
+  const activeTabId = useAppStore((s) => s.activeTabId)
+  const switchTab = useAppStore((s) => s.switchTab)
+  const closeTab = useAppStore((s) => s.closeTab)
+
+  if (tabs.length === 0) return null
+
+  return (
+    <Box
+      sx={{
+        display: 'flex',
+        alignItems: 'stretch',
+        borderBottom: 1,
+        borderColor: 'divider',
+        overflow: 'auto',
+        flexShrink: 0,
+        bgcolor: 'background.paper'
+      }}
+    >
+      {tabs.map((tab) => {
+        const active = tab.tabId === activeTabId
+        return (
+          <Box
+            key={tab.tabId}
+            onClick={() => void switchTab(tab.tabId)}
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 0.5,
+              px: 1,
+              py: 0.5,
+              cursor: 'pointer',
+              borderRight: 1,
+              borderColor: 'divider',
+              bgcolor: active ? 'action.selected' : 'transparent',
+              maxWidth: 200,
+              '&:hover': { bgcolor: active ? 'action.selected' : 'action.hover' }
+            }}
+          >
+            <Typography
+              variant="caption"
+              noWrap
+              sx={{ fontWeight: active ? 700 : 500, fontSize: 11, flex: 1 }}
+            >
+              {tab.request.name || 'Untitled'}
+            </Typography>
+            <IconButton
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation()
+                closeTab(tab.tabId)
+              }}
+              sx={{ p: 0.25 }}
+            >
+              <CloseIcon sx={{ fontSize: 14 }} />
+            </IconButton>
+          </Box>
+        )
+      })}
+    </Box>
+  )
+}
+
 function RequestBuilderShell() {
   const hasActiveRequest = useAppStore((s) => s.activeRequest !== null)
   const requestId = useAppStore((s) => s.activeRequest?.id)
+  const activeTabId = useAppStore((s) => s.activeTabId)
   const requestCreatedAt = useAppStore((s) => s.activeRequest?.createdAt ?? 0)
+  const tabs = useAppStore((s) => s.requestTabs)
   const collectionId = useAppStore((s) => s.activeRequest?.collectionId)
   const deleteRequest = useAppStore((s) => s.deleteRequest)
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -546,7 +613,12 @@ function RequestBuilderShell() {
     setDeleteOpen(true)
   }, [])
 
-  if (!hasActiveRequest) {
+  const handleDelete = useCallback(async () => {
+    if (requestId) await deleteRequest(requestId)
+    setDeleteOpen(false)
+  }, [deleteRequest, requestId])
+
+  if (!hasActiveRequest && tabs.length === 0) {
     return (
       <Box sx={{ p: 1.5, textAlign: 'center' }}>
         <Typography sx={COMPACT.caption}>Select or create a request</Typography>
@@ -554,26 +626,31 @@ function RequestBuilderShell() {
     )
   }
 
-  const handleDelete = async () => {
-    if (requestId) await deleteRequest(requestId)
-    setDeleteOpen(false)
-  }
-
   const editorKey = requestId || `new-${requestCreatedAt}`
+  const tabId = activeTabId || editorKey
 
   return (
-    <>
-      <RequestEditorProvider key={editorKey} requestId={editorKey}>
-        <RequestBuilderForm collectionVariables={collectionVariables} onDelete={openDeleteDialog} />
-      </RequestEditorProvider>
-      <ConfirmDialog
-        open={deleteOpen}
-        title="Delete Request"
-        message={`Delete "${deleteName}"? This cannot be undone.`}
-        onConfirm={handleDelete}
-        onCancel={() => setDeleteOpen(false)}
-      />
-    </>
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
+      <RequestTabBar />
+      {hasActiveRequest ? (
+        <>
+          <RequestEditorProvider key={editorKey} tabId={tabId} requestId={editorKey}>
+            <RequestBuilderForm collectionVariables={collectionVariables} onDelete={openDeleteDialog} />
+          </RequestEditorProvider>
+          <ConfirmDialog
+            open={deleteOpen}
+            title="Delete Request"
+            message={`Delete "${deleteName}"? This cannot be undone.`}
+            onConfirm={handleDelete}
+            onCancel={() => setDeleteOpen(false)}
+          />
+        </>
+      ) : (
+        <Box sx={{ p: 1.5, textAlign: 'center', flex: 1 }}>
+          <Typography sx={COMPACT.caption}>Select a tab or create a request</Typography>
+        </Box>
+      )}
+    </Box>
   )
 }
 

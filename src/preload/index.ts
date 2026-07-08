@@ -42,7 +42,14 @@ const lisek: LisekAPI = {
   export: {
     postman: (collectionId, filePath) => ipcRenderer.invoke('export:postman', collectionId, filePath),
     openapi: (collectionId, filePath) => ipcRenderer.invoke('export:openapi', collectionId, filePath),
-    curl: (requestId) => ipcRenderer.invoke('export:curl', requestId)
+    insomnia: (collectionId, filePath) => ipcRenderer.invoke('export:insomnia', collectionId, filePath),
+    curl: (requestId) => ipcRenderer.invoke('export:curl', requestId),
+    har: (historyId, filePath) => ipcRenderer.invoke('export:har', historyId, filePath),
+    harFromRequest: (requestId, filePath) => ipcRenderer.invoke('export:harFromRequest', requestId, filePath)
+  },
+  workspace: {
+    export: (filePath) => ipcRenderer.invoke('workspace:export', filePath),
+    import: (filePath) => ipcRenderer.invoke('workspace:import', filePath)
   },
   openapi: {
     list: () => ipcRenderer.invoke('openapi:list'),
@@ -61,8 +68,10 @@ const lisek: LisekAPI = {
     clearDomain: (domain) => ipcRenderer.invoke('cookies:clearDomain', domain)
   },
   runner: {
-    runCollection: (collectionId, stopOnFailure) =>
-      ipcRenderer.invoke('runner:runCollection', collectionId, stopOnFailure)
+    runCollection: (collectionId, options) =>
+      ipcRenderer.invoke('runner:runCollection', collectionId, options),
+    exportReport: (report, filePath, format) =>
+      ipcRenderer.invoke('runner:exportReport', report, filePath, format)
   },
   ws: {
     connect: (url, headers) => ipcRenderer.invoke('ws:connect', url, headers),

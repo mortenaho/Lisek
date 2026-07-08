@@ -45,6 +45,19 @@ type RequestRow = {
   updated_at: number
   last_response_json?: string | null
   last_test_results_json?: string | null
+  tags_json?: string
+  notes?: string
+}
+
+type CollectionRow = {
+  id: string
+  name: string
+  parent_id: string | null
+  sort_order: number
+  pinned?: number
+  variables_json: string
+  description?: string
+  created_at: number
 }
 
 function nextCollectionSortOrder(parentId: string | null): number {
@@ -96,6 +109,8 @@ export function rowToRequest(row: RequestRow): RequestModel {
     grpcMessage: row.grpc_message_json,
     sortOrder: row.sort_order,
     pinned: Boolean(row.pinned ?? 0),
+    tags: JSON.parse(row.tags_json || '[]'),
+    notes: row.notes || '',
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     lastResponse: row.last_response_json ? JSON.parse(row.last_response_json) : null,
@@ -137,30 +152,29 @@ export function requestToRow(req: RequestModel) {
     grpc_message_json: req.grpcMessage,
     sort_order: req.sortOrder,
     pinned: req.pinned ? 1 : 0,
+    tags_json: JSON.stringify(req.tags || []),
+    notes: req.notes || '',
     created_at: req.createdAt,
     updated_at: req.updatedAt
   }
 }
 
-export function listCollections(): CollectionModel[] {
-  const rows = getAll<{
-    id: string
-    name: string
-    parent_id: string | null
-    sort_order: number
-    pinned?: number
-    variables_json: string
-    created_at: number
-  }>('SELECT * FROM collections ORDER BY pinned DESC, sort_order')
-  return rows.map((r) => ({
+function rowToCollection(r: CollectionRow): CollectionModel {
+  return {
     id: r.id,
     name: r.name,
     parentId: r.parent_id,
     sortOrder: r.sort_order,
     pinned: Boolean(r.pinned ?? 0),
     variables: JSON.parse(r.variables_json),
+    description: r.description || '',
     createdAt: r.created_at
-  }))
+  }
+}
+
+export function listCollections(): CollectionModel[] {
+  const rows = getAll<CollectionRow>('SELECT * FROM collections ORDER BY pinned DESC, sort_order')
+  return rows.map(rowToCollection)
 }
 
 export function createCollection(data: Partial<CollectionModel>): CollectionModel {
@@ -169,9 +183,10 @@ export function createCollection(data: Partial<CollectionModel>): CollectionMode
   const parentId = data.parentId ?? null
   const sortOrder = data.sortOrder ?? nextCollectionSortOrder(parentId)
   const pinned = data.pinned ?? false
+  const description = data.description ?? ''
   runQuery(
-    'INSERT INTO collections (id, name, parent_id, sort_order, pinned, variables_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
-    [id, data.name || 'New Collection', parentId, sortOrder, pinned ? 1 : 0, JSON.stringify(data.variables || []), now]
+    'INSERT INTO collections (id, name, parent_id, sort_order, pinned, variables_json, description, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    [id, data.name || 'New Collection', parentId, sortOrder, pinned ? 1 : 0, JSON.stringify(data.variables || []), description, now]
   )
   return {
     id,
@@ -180,28 +195,23 @@ export function createCollection(data: Partial<CollectionModel>): CollectionMode
     sortOrder,
     pinned,
     variables: data.variables || [],
+    description,
     createdAt: now
   }
 }
 
 export function updateCollection(id: string, data: Partial<CollectionModel>): CollectionModel {
-  const existing = getOne<{
-    id: string
-    name: string
-    parent_id: string | null
-    sort_order: number
-    pinned?: number
-    variables_json: string
-    created_at: number
-  }>('SELECT * FROM collections WHERE id = ?', [id])!
+  const existing = getOne<CollectionRow>('SELECT * FROM collections WHERE id = ?', [id])!
   const name = data.name ?? existing.name
   const parentId = data.parentId !== undefined ? data.parentId : existing.parent_id
   const sortOrder = data.sortOrder ?? existing.sort_order
   const pinned = data.pinned !== undefined ? data.pinned : Boolean(existing.pinned ?? 0)
   const variablesJson = data.variables !== undefined ? JSON.stringify(data.variables) : existing.variables_json
-  runQuery('UPDATE collections SET name = ?, parent_id = ?, sort_order = ?, pinned = ?, variables_json = ? WHERE id = ?', [
-    name, parentId, sortOrder, pinned ? 1 : 0, variablesJson, id
-  ])
+  const description = data.description !== undefined ? data.description : (existing.description || '')
+  runQuery(
+    'UPDATE collections SET name = ?, parent_id = ?, sort_order = ?, pinned = ?, variables_json = ?, description = ? WHERE id = ?',
+    [name, parentId, sortOrder, pinned ? 1 : 0, variablesJson, description, id]
+  )
   return {
     id,
     name,
@@ -209,6 +219,7 @@ export function updateCollection(id: string, data: Partial<CollectionModel>): Co
     sortOrder,
     pinned,
     variables: JSON.parse(variablesJson),
+    description,
     createdAt: existing.created_at
   }
 }
@@ -274,6 +285,8 @@ export function saveRequest(data: Partial<RequestModel> & { id?: string }): Requ
     grpcProtoId: data.grpcProtoId ?? existing?.grpcProtoId ?? null,
     grpcMetadata: data.grpcMetadata ?? existing?.grpcMetadata ?? [],
     grpcMessage: data.grpcMessage ?? existing?.grpcMessage ?? '{}',
+    tags: data.tags ?? existing?.tags ?? [],
+    notes: data.notes ?? existing?.notes ?? '',
     sortOrder,
     pinned,
     createdAt: existing?.createdAt ?? now,
@@ -286,12 +299,13 @@ export function saveRequest(data: Partial<RequestModel> & { id?: string }): Requ
       `UPDATE requests SET collection_id=?, name=?, method=?, url=?, headers_json=?, params_json=?, body_type=?, body_json=?,
        auth_type=?, auth_json=?, pre_request_script=?, test_script=?, protocol=?, graphql_query=?, graphql_variables=?,
        ws_url=?, ws_messages_json=?, grpc_target=?, grpc_service=?, grpc_method=?, grpc_call_type=?, grpc_proto_id=?,
-       grpc_metadata_json=?, grpc_message_json=?, sort_order=?, pinned=?, updated_at=? WHERE id=?`,
+       grpc_metadata_json=?, grpc_message_json=?, sort_order=?, pinned=?, tags_json=?, notes=?, updated_at=? WHERE id=?`,
       [
         row.collection_id, row.name, row.method, row.url, row.headers_json, row.params_json, row.body_type, row.body_json,
         row.auth_type, row.auth_json, row.pre_request_script, row.test_script, row.protocol, row.graphql_query,
         row.graphql_variables, row.ws_url, row.ws_messages_json, row.grpc_target, row.grpc_service, row.grpc_method,
-        row.grpc_call_type, row.grpc_proto_id, row.grpc_metadata_json, row.grpc_message_json, row.sort_order, row.pinned, row.updated_at, row.id
+        row.grpc_call_type, row.grpc_proto_id, row.grpc_metadata_json, row.grpc_message_json, row.sort_order, row.pinned,
+        row.tags_json, row.notes, row.updated_at, row.id
       ]
     )
   } else {
@@ -299,14 +313,14 @@ export function saveRequest(data: Partial<RequestModel> & { id?: string }): Requ
       `INSERT INTO requests (id, collection_id, name, method, url, headers_json, params_json, body_type, body_json,
        auth_type, auth_json, pre_request_script, test_script, protocol, graphql_query, graphql_variables,
        ws_url, ws_messages_json, grpc_target, grpc_service, grpc_method, grpc_call_type, grpc_proto_id,
-       grpc_metadata_json, grpc_message_json, sort_order, pinned, created_at, updated_at)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+       grpc_metadata_json, grpc_message_json, sort_order, pinned, tags_json, notes, created_at, updated_at)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [
         row.id, row.collection_id, row.name, row.method, row.url, row.headers_json, row.params_json, row.body_type,
         row.body_json, row.auth_type, row.auth_json, row.pre_request_script, row.test_script, row.protocol,
         row.graphql_query, row.graphql_variables, row.ws_url, row.ws_messages_json, row.grpc_target, row.grpc_service,
         row.grpc_method, row.grpc_call_type, row.grpc_proto_id, row.grpc_metadata_json, row.grpc_message_json,
-        row.sort_order, row.pinned, row.created_at, row.updated_at
+        row.sort_order, row.pinned, row.tags_json, row.notes, row.created_at, row.updated_at
       ]
     )
   }

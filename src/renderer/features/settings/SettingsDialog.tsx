@@ -7,7 +7,9 @@ import {
   FormControlLabel,
   Switch,
   TextField,
-  Box
+  Box,
+  Divider,
+  Typography
 } from '@mui/material'
 import { useEffect, useState } from 'react'
 import type { Settings } from '@shared/types'
@@ -17,20 +19,24 @@ interface Props {
   open: boolean
   onClose: () => void
   onShowAbout?: () => void
+  onShowShortcuts?: () => void
 }
 
-export default function SettingsDialog({ open, onClose, onShowAbout }: Props) {
+export default function SettingsDialog({ open, onClose, onShowAbout, onShowShortcuts }: Props) {
   const setThemeMode = useAppStore((s) => s.setThemeMode)
+  const loadInitial = useAppStore((s) => s.loadInitial)
   const [settings, setSettings] = useState<Settings>({
     sslVerify: true,
     timeoutMs: 30000,
     followRedirects: true,
     theme: 'light'
   })
+  const [backupStatus, setBackupStatus] = useState<string | null>(null)
 
   useEffect(() => {
     if (open) {
       window.lisek.settings.get().then(setSettings)
+      setBackupStatus(null)
     }
   }, [open])
 
@@ -40,8 +46,25 @@ export default function SettingsDialog({ open, onClose, onShowAbout }: Props) {
     onClose()
   }
 
+  const exportWorkspace = async () => {
+    const path = await window.lisek.dialog.saveFile('lisek-workspace.json', [
+      { name: 'JSON', extensions: ['json'] }
+    ])
+    if (!path) return
+    await window.lisek.workspace.export(path)
+    setBackupStatus('Workspace exported successfully')
+  }
+
+  const importWorkspace = async () => {
+    const path = await window.lisek.dialog.openFile([{ name: 'JSON', extensions: ['json'] }])
+    if (!path) return
+    await window.lisek.workspace.import(path)
+    await loadInitial()
+    setBackupStatus('Workspace restored successfully')
+  }
+
   return (
-    <Dialog open={open} onClose={onClose}>
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>Settings</DialogTitle>
       <DialogContent>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 320, pt: 1 }}>
@@ -70,6 +93,32 @@ export default function SettingsDialog({ open, onClose, onShowAbout }: Props) {
             value={settings.timeoutMs}
             onChange={(e) => setSettings({ ...settings, timeoutMs: parseInt(e.target.value, 10) || 30000 })}
           />
+          <TextField
+            label="HTTP Proxy URL"
+            size="small"
+            placeholder="http://127.0.0.1:8888"
+            value={settings.proxyUrl || ''}
+            onChange={(e) => setSettings({ ...settings, proxyUrl: e.target.value })}
+            helperText="Optional proxy for HTTP, GraphQL, and collection runner"
+          />
+          <TextField
+            label="Default Runner Iterations"
+            type="number"
+            size="small"
+            value={settings.runnerIterations ?? 1}
+            onChange={(e) =>
+              setSettings({ ...settings, runnerIterations: Math.max(1, parseInt(e.target.value, 10) || 1) })
+            }
+          />
+          <TextField
+            label="Default Runner Delay (ms)"
+            type="number"
+            size="small"
+            value={settings.runnerDelayMs ?? 0}
+            onChange={(e) =>
+              setSettings({ ...settings, runnerDelayMs: Math.max(0, parseInt(e.target.value, 10) || 0) })
+            }
+          />
           <FormControlLabel
             control={
               <Switch
@@ -81,18 +130,46 @@ export default function SettingsDialog({ open, onClose, onShowAbout }: Props) {
             }
             label="Dark Theme"
           />
+
+          <Divider />
+
+          <Typography variant="subtitle2">Workspace Backup</Typography>
+          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+            <Button size="small" variant="outlined" onClick={() => void exportWorkspace()}>
+              Export backup
+            </Button>
+            <Button size="small" variant="outlined" color="warning" onClick={() => void importWorkspace()}>
+              Restore backup
+            </Button>
+          </Box>
+          {backupStatus && (
+            <Typography variant="caption" color="success.main">
+              {backupStatus}
+            </Typography>
+          )}
         </Box>
       </DialogContent>
       <DialogActions sx={{ justifyContent: 'space-between', px: 3, pb: 2 }}>
-        <Button
-          size="small"
-          onClick={() => {
-            onClose()
-            onShowAbout?.()
-          }}
-        >
-          About
-        </Button>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button
+            size="small"
+            onClick={() => {
+              onClose()
+              onShowAbout?.()
+            }}
+          >
+            About
+          </Button>
+          <Button
+            size="small"
+            onClick={() => {
+              onClose()
+              onShowShortcuts?.()
+            }}
+          >
+            Shortcuts
+          </Button>
+        </Box>
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Button onClick={onClose}>Cancel</Button>
           <Button variant="contained" onClick={save}>

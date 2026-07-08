@@ -14,7 +14,11 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   sslVerify: 'true',
   timeoutMs: '30000',
   followRedirects: 'true',
-  theme: 'light'
+  theme: 'light',
+  proxyUrl: '',
+  runnerIterations: '1',
+  runnerDelayMs: '0',
+  autoUpdate: 'true'
 }
 
 const SCHEMA = `
@@ -127,6 +131,16 @@ function migrateSchema(database: Database) {
   if (!collectionColumns.has('pinned')) {
     database.run('ALTER TABLE collections ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0')
   }
+  if (!collectionColumns.has('description')) {
+    database.run("ALTER TABLE collections ADD COLUMN description TEXT NOT NULL DEFAULT ''")
+  }
+
+  if (!requestColumns.has('tags_json')) {
+    database.run("ALTER TABLE requests ADD COLUMN tags_json TEXT NOT NULL DEFAULT '[]'")
+  }
+  if (!requestColumns.has('notes')) {
+    database.run("ALTER TABLE requests ADD COLUMN notes TEXT NOT NULL DEFAULT ''")
+  }
 }
 
 export async function initDatabase(path: string): Promise<{ isNew: boolean }> {
@@ -182,7 +196,11 @@ export function getSettings(): Settings {
     sslVerify: map.sslVerify !== 'false',
     timeoutMs: parseInt(map.timeoutMs || '30000', 10),
     followRedirects: map.followRedirects !== 'false',
-    theme: (map.theme as 'light' | 'dark') || 'light'
+    theme: (map.theme as 'light' | 'dark') || 'light',
+    proxyUrl: map.proxyUrl || '',
+    runnerIterations: Math.max(1, parseInt(map.runnerIterations || '1', 10)),
+    runnerDelayMs: Math.max(0, parseInt(map.runnerDelayMs || '0', 10)),
+    autoUpdate: map.autoUpdate !== 'false'
   }
 }
 

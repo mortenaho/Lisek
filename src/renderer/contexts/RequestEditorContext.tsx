@@ -20,9 +20,11 @@ const RequestDraftContext = createContext<RequestModel | null>(null)
 const RequestEditorActionsContext = createContext<RequestEditorActions | null>(null)
 
 export function RequestEditorProvider({
+  tabId,
   requestId,
   children
 }: {
+  tabId: string
   requestId: string
   children: ReactNode
 }) {
@@ -30,16 +32,11 @@ export function RequestEditorProvider({
   const [draft, setDraft] = useState<RequestModel>(
     () => useAppStore.getState().activeRequest!
   )
-  const lastRequestId = useRef(requestId)
   const draftRef = useRef(draft)
   draftRef.current = draft
 
-  useEffect(() => {
-    lastRequestId.current = requestId
-  }, [requestId])
-
   const storeRequest = useAppStore((s) =>
-    s.activeRequest?.id === requestId ? s.activeRequest : null
+    s.activeTabId === tabId && s.activeRequest ? s.activeRequest : null
   )
 
   useEffect(() => {
@@ -47,8 +44,20 @@ export function RequestEditorProvider({
   }, [storeRequest])
 
   const flush = useCallback(() => {
-    useAppStore.setState({ activeRequest: draftRef.current })
-  }, [])
+    const current = draftRef.current
+    useAppStore.setState((state) => ({
+      activeRequest: state.activeTabId === tabId ? current : state.activeRequest,
+      requestTabs: state.requestTabs.map((t) =>
+        t.tabId === tabId ? { ...t, request: current } : t
+      )
+    }))
+  }, [tabId])
+
+  useEffect(() => {
+    return () => {
+      flush()
+    }
+  }, [tabId, flush])
 
   const patch = useCallback((partial: Partial<RequestModel>) => {
     setDraft((prev) => ({ ...prev, ...partial }))

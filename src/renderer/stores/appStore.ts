@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { v4 as uuidv4 } from 'uuid'
 import type {
   CollectionModel,
   EnvironmentModel,
@@ -12,6 +13,14 @@ import type {
 } from '@shared/types'
 import { resolveCollectionVariables } from '@shared/collectionVariables'
 
+export interface RequestTab {
+  tabId: string
+  request: RequestModel
+  response: HttpResponse | null
+  testResults: TestResult[]
+  scriptLogs: string[]
+}
+
 interface AppState {
   themeMode: 'light' | 'dark'
   collections: CollectionModel[]
@@ -20,6 +29,8 @@ interface AppState {
   history: HistoryModel[]
   openapiSpecs: OpenApiSpecModel[]
   protoFiles: ProtoFileModel[]
+  requestTabs: RequestTab[]
+  activeTabId: string | null
   activeRequest: RequestModel | null
   activeSidebar: 'collections' | 'history' | 'openapi' | 'proto'
   response: HttpResponse | null
@@ -34,6 +45,8 @@ interface AppState {
   importType: 'postman' | 'openapi' | 'insomnia' | 'curl' | null
   curlPaste: string
   searchQuery: string
+  commandPaletteOpen: boolean
+  shortcutsOpen: boolean
 
   loadInitial: () => Promise<void>
   setThemeMode: (mode: 'light' | 'dark') => void
@@ -42,6 +55,11 @@ interface AppState {
   selectRequest: (req: RequestModel | null) => Promise<void>
   openHistoryItem: (item: HistoryModel) => void
   updateActiveRequest: (partial: Partial<RequestModel>) => void
+  switchTab: (tabId: string) => Promise<void>
+  closeTab: (tabId: string) => void
+  closeActiveTab: () => void
+  setCommandPaletteOpen: (open: boolean) => void
+  setShortcutsOpen: (open: boolean) => void
   loadCollections: () => Promise<void>
   loadRequests: () => Promise<void>
   loadEnvironments: () => Promise<void>
@@ -99,6 +117,20 @@ const emptyRequest = (): RequestModel => ({
   updatedAt: Date.now()
 })
 
+function tabKeyForRequest(req: RequestModel): string {
+  return req.id || `draft-${req.createdAt}`
+}
+
+function syncFromTab(tab: RequestTab) {
+  return {
+    activeTabId: tab.tabId,
+    activeRequest: tab.request,
+    response: tab.response,
+    testResults: tab.testResults,
+    scriptLogs: tab.scriptLogs
+  }
+}
+
 export const useAppStore = create<AppState>((set, get) => ({
   themeMode: 'light',
   collections: [],
@@ -107,7 +139,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   history: [],
   openapiSpecs: [],
   protoFiles: [],
-  activeRequest: emptyRequest(),
+  requestTabs: [],
+  activeTabId: null,
+  activeRequest: null,
   activeSidebar: 'collections',
   response: null,
   testResults: [],
@@ -121,6 +155,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   importType: null,
   curlPaste: '',
   searchQuery: '',
+  commandPaletteOpen: false,
+  shortcutsOpen: false,
 
   loadInitial: async () => {
     const settings = await window.lisek.settings.get()
@@ -142,37 +178,161 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   setActiveSidebar: (tab) => set({ activeSidebar: tab }),
 
-  setActiveRequest: (req) => set({ activeRequest: req, response: null, testResults: [], scriptLogs: [] }),
+  setActiveRequest: (req) => {
+    if (!req) {
+      set({ activeRequest: null, response: null, testResults: [], scriptLogs: [] })
+      return
+    }
+    const tabId = get().activeTabId || uuidv4()
+    const tabs = get().requestTabs
+    const existing = tabs.find((t) => t.tabId === tabId)
+    if (existing) {
+      set({
+        requestTabs: tabs.map((t) =>
+          t.tabId === tabId ? { ...t, request: req, response: null, testResults: [], scriptLogs: [] } : t
+        ),
+        activeRequest: req,
+        response: null,
+        testResults: [],
+        scriptLogs: []
+      })
+    } else {
+      const tab: RequestTab = {
+        tabId,
+        request: req,
+        response: null,
+        testResults: [],
+        scriptLogs: []
+      }
+      set({ requestTabs: [...tabs, tab], ...syncFromTab(tab) })
+    }
+  },
 
   selectRequest: async (req) => {
-    set({ response: null, testResults: [], scriptLogs: [] })
+    const state = get()
+    const { activeTabId, activeRequest, requestTabs, response, testResults, scriptLogs } = state
+
+    let tabs = requestTabs
+    if (activeTabId && activeRequest) {
+      tabs = tabs.map((t) =>
+        t.tabId === activeTabId ? { ...t, request: activeRequest, response, testResults, scriptLogs } : t
+      )
+    }
 
     if (!req) {
-      set({ activeRequest: null })
+      set({ requestTabs: tabs, activeTabId: null, activeRequest: null, response: null, testResults: [], scriptLogs: [] })
       return
     }
 
-    set({ activeRequest: req })
+    const key = tabKeyForRequest(req)
+    const existingTab = tabs.find((t) => tabKeyForRequest(t.request) === key || (req.id && t.request.id === req.id))
+
+    if (existingTab) {
+      set({ requestTabs: tabs, ...syncFromTab(existingTab) })
+      if (req.id) {
+        const full = await window.lisek.requests.get(req.id)
+        if (full) {
+          const updatedTab = {
+            ...existingTab,
+            request: full,
+            response: full.lastResponse ?? existingTab.response,
+            testResults: full.lastTestResults ?? existingTab.testResults
+          }
+          set({
+            requestTabs: get().requestTabs.map((t) => (t.tabId === existingTab.tabId ? updatedTab : t)),
+            ...syncFromTab(updatedTab)
+          })
+        }
+      }
+      return
+    }
+
+    const tab: RequestTab = {
+      tabId: uuidv4(),
+      request: req,
+      response: null,
+      testResults: [],
+      scriptLogs: []
+    }
+    set({ requestTabs: [...tabs, tab], ...syncFromTab(tab) })
 
     if (req.id) {
       const full = await window.lisek.requests.get(req.id)
-      if (full && get().activeRequest?.id === full.id) {
-        set({
-          activeRequest: full,
+      if (full && get().activeTabId === tab.tabId) {
+        const loaded: RequestTab = {
+          ...tab,
+          request: full,
           response: full.lastResponse ?? null,
           testResults: full.lastTestResults ?? []
+        }
+        set({
+          requestTabs: get().requestTabs.map((t) => (t.tabId === tab.tabId ? loaded : t)),
+          ...syncFromTab(loaded)
         })
       }
     }
   },
 
+  switchTab: async (tabId) => {
+    const { activeTabId, activeRequest, requestTabs, response, testResults, scriptLogs } = get()
+    let tabs = requestTabs
+    if (activeTabId && activeRequest) {
+      tabs = tabs.map((t) =>
+        t.tabId === activeTabId ? { ...t, request: activeRequest, response, testResults, scriptLogs } : t
+      )
+    }
+    const next = tabs.find((t) => t.tabId === tabId)
+    if (!next) return
+    set({ requestTabs: tabs, ...syncFromTab(next) })
+  },
+
+  closeTab: (tabId) => {
+    const { activeTabId, activeRequest, requestTabs, response, testResults, scriptLogs } = get()
+    let tabs = requestTabs
+    if (activeTabId && activeRequest) {
+      tabs = tabs.map((t) =>
+        t.tabId === activeTabId ? { ...t, request: activeRequest, response, testResults, scriptLogs } : t
+      )
+    }
+    const idx = tabs.findIndex((t) => t.tabId === tabId)
+    if (idx < 0) return
+    const remaining = tabs.filter((t) => t.tabId !== tabId)
+    if (tabId === activeTabId) {
+      const next = remaining[Math.min(idx, remaining.length - 1)]
+      if (next) {
+        set({ requestTabs: remaining, ...syncFromTab(next) })
+      } else {
+        set({ requestTabs: [], activeTabId: null, activeRequest: null, response: null, testResults: [], scriptLogs: [] })
+      }
+    } else {
+      set({ requestTabs: remaining })
+    }
+  },
+
+  closeActiveTab: () => {
+    const { activeTabId } = get()
+    if (activeTabId) get().closeTab(activeTabId)
+  },
+
   openHistoryItem: (item) => {
-    set({
-      activeRequest: item.requestSnapshot,
+    const tab: RequestTab = {
+      tabId: uuidv4(),
+      request: item.requestSnapshot,
       response: item.responseSnapshot,
       testResults: [],
       scriptLogs: []
-    })
+    }
+    const key = tabKeyForRequest(item.requestSnapshot)
+    const existing = get().requestTabs.find((t) => tabKeyForRequest(t.request) === key)
+    if (existing) {
+      const updated = { ...existing, response: item.responseSnapshot, testResults: [], scriptLogs: [] }
+      set({
+        requestTabs: get().requestTabs.map((t) => (t.tabId === existing.tabId ? updated : t)),
+        ...syncFromTab(updated)
+      })
+      return
+    }
+    set({ requestTabs: [...get().requestTabs, tab], ...syncFromTab(tab) })
   },
 
   updateActiveRequest: (partial) => {
@@ -180,6 +340,9 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (!current) return
     set({ activeRequest: { ...current, ...partial } })
   },
+
+  setCommandPaletteOpen: (open) => set({ commandPaletteOpen: open }),
+  setShortcutsOpen: (open) => set({ shortcutsOpen: open }),
 
   loadCollections: async () => {
     const collections = await window.lisek.collections.list()
@@ -235,16 +398,18 @@ export const useAppStore = create<AppState>((set, get) => ({
           message: saved.grpcMessage,
           sslVerify: get().settings.sslVerify
         })
+        const grpcResponse = {
+          statusCode: 200,
+          statusText: result.status,
+          headers: result.metadata,
+          body: JSON.stringify(result.messages, null, 2),
+          durationMs: 0,
+          sizeBytes: 0,
+          cookies: []
+        }
         set({
-          response: {
-            statusCode: 200,
-            statusText: result.status,
-            headers: result.metadata,
-            body: JSON.stringify(result.messages, null, 2),
-            durationMs: 0,
-            sizeBytes: 0,
-            cookies: []
-          }
+          response: grpcResponse,
+          activeRequest: { ...saved, lastResponse: grpcResponse }
         })
         return
       }
@@ -275,29 +440,46 @@ export const useAppStore = create<AppState>((set, get) => ({
         collectionVariables
       })
 
+      const updatedRequest = {
+        ...saved,
+        lastResponse: result.response,
+        lastTestResults: result.testResults
+      }
       set({
         response: result.response,
         testResults: result.testResults,
         scriptLogs: result.scriptLogs ?? [],
-        activeRequest: {
-          ...saved,
-          lastResponse: result.response,
-          lastTestResults: result.testResults
-        }
+        activeRequest: updatedRequest
       })
+
+      const { activeTabId, requestTabs } = get()
+      if (activeTabId) {
+        set({
+          requestTabs: requestTabs.map((t) =>
+            t.tabId === activeTabId
+              ? {
+                  ...t,
+                  request: updatedRequest,
+                  response: result.response,
+                  testResults: result.testResults,
+                  scriptLogs: result.scriptLogs ?? []
+                }
+              : t
+          )
+        })
+      }
       await get().loadHistory()
     } catch (e) {
-      set({
-        response: {
-          statusCode: 0,
-          statusText: 'Error',
-          headers: {},
-          body: e instanceof Error ? e.message : String(e),
-          durationMs: 0,
-          sizeBytes: 0,
-          cookies: []
-        }
-      })
+      const errResponse = {
+        statusCode: 0,
+        statusText: 'Error',
+        headers: {},
+        body: e instanceof Error ? e.message : String(e),
+        durationMs: 0,
+        sizeBytes: 0,
+        cookies: []
+      }
+      set({ response: errResponse })
     } finally {
       set({ loading: false })
     }
@@ -308,6 +490,12 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (!req) return null
     const saved = await window.lisek.requests.save(req)
     set({ activeRequest: saved })
+    const { activeTabId, requestTabs } = get()
+    if (activeTabId) {
+      set({
+        requestTabs: requestTabs.map((t) => (t.tabId === activeTabId ? { ...t, request: saved } : t))
+      })
+    }
     await get().loadRequests()
     return saved
   },
@@ -334,13 +522,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   createRequest: async (collectionId = null) => {
-    set({
-      activeRequest: { ...emptyRequest(), collectionId, name: 'New Request' },
-      response: null,
-      testResults: [],
-      scriptLogs: []
-    })
-
     const saved = await window.lisek.requests.save({
       name: 'New Request',
       collectionId,
@@ -348,14 +529,28 @@ export const useAppStore = create<AppState>((set, get) => ({
       url: '',
       protocol: 'http'
     })
-    set({ activeRequest: saved, response: null, testResults: [], scriptLogs: [] })
+    const tab: RequestTab = {
+      tabId: uuidv4(),
+      request: saved,
+      response: null,
+      testResults: [],
+      scriptLogs: []
+    }
+    set({
+      requestTabs: [...get().requestTabs, tab],
+      ...syncFromTab(tab)
+    })
     await get().loadRequests()
   },
 
   deleteRequest: async (id) => {
     await window.lisek.requests.delete(id)
-    if (get().activeRequest?.id === id) {
-      set({ activeRequest: emptyRequest(), response: null, testResults: [], scriptLogs: [] })
+    const closing = get().requestTabs.filter((t) => t.request.id === id).map((t) => t.tabId)
+    for (const tabId of closing) {
+      get().closeTab(tabId)
+    }
+    if (get().requestTabs.length === 0) {
+      set({ activeRequest: null, activeTabId: null, response: null, testResults: [], scriptLogs: [] })
     }
     await get().loadRequests()
   },

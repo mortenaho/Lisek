@@ -1,4 +1,4 @@
-import { Agent, fetch as undiciFetch } from 'undici'
+import { Agent, ProxyAgent, fetch as undiciFetch } from 'undici'
 import type { CookieRecord } from '../../../shared/types'
 import {
   applyCookieHeader,
@@ -9,16 +9,35 @@ import {
 const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308])
 const MAX_REDIRECTS = 20
 
+export interface FetchOptions {
+  sslVerify?: boolean
+  followRedirects?: boolean
+  proxyUrl?: string
+}
+
+function createDispatcher(sslVerify: boolean, proxyUrl?: string) {
+  const tls = sslVerify === false ? { rejectUnauthorized: false as const } : undefined
+  if (proxyUrl?.trim()) {
+    return new ProxyAgent({
+      uri: proxyUrl.trim(),
+      ...(tls ? { requestTls: tls, proxyTls: tls } : {})
+    })
+  }
+  if (tls) return new Agent({ connect: tls })
+  return undefined
+}
+
 export async function secureFetch(
   url: string,
   init: RequestInit,
-  sslVerify: boolean
+  options: FetchOptions = {}
 ): Promise<Response> {
-  if (sslVerify !== false) {
+  const sslVerify = options.sslVerify !== false
+  const dispatcher = createDispatcher(sslVerify, options.proxyUrl)
+  if (!dispatcher) {
     return fetch(url, init)
   }
-  const agent = new Agent({ connect: { rejectUnauthorized: false } })
-  return undiciFetch(url, { ...init, dispatcher: agent } as never) as unknown as Response
+  return undiciFetch(url, { ...init, dispatcher } as never) as unknown as Response
 }
 
 export interface FetchWithCookieJarResult {
@@ -30,7 +49,7 @@ export interface FetchWithCookieJarResult {
 export async function fetchWithCookieJar(
   url: string,
   init: RequestInit,
-  options: { sslVerify?: boolean; followRedirects?: boolean } = {}
+  options: FetchOptions = {}
 ): Promise<FetchWithCookieJarResult> {
   const sslVerify = options.sslVerify !== false
   const followRedirects = options.followRedirects !== false
@@ -55,7 +74,7 @@ export async function fetchWithCookieJar(
         headers,
         redirect: 'manual'
       },
-      sslVerify
+      options
     )
 
     storedCookies.push(...storeSetCookieHeaders(extractSetCookieHeaders(response), currentUrl))

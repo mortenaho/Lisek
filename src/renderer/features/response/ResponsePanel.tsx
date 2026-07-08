@@ -25,6 +25,7 @@ import HelpOutlineIcon from '@mui/icons-material/HelpOutline'
 import CloseIcon from '@mui/icons-material/Close'
 import BoltIcon from '@mui/icons-material/Bolt'
 import { forwardRef, memo, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
+import { v4 as uuidv4 } from 'uuid'
 import type { editor } from 'monaco-editor'
 import { useTheme } from '@mui/material/styles'
 import Editor from '@monaco-editor/react'
@@ -238,6 +239,9 @@ const JsonQueryPanel = memo(function JsonQueryPanel({
   const [queryResult, setQueryResult] = useState<string | null>(null)
   const [queryError, setQueryError] = useState<string | null>(null)
   const [helpOpen, setHelpOpen] = useState(false)
+  const [envVarName, setEnvVarName] = useState('')
+  const environments = useAppStore((s) => s.environments)
+  const loadEnvironments = useAppStore((s) => s.loadEnvironments)
 
   useEffect(() => {
     setJsonQuery('')
@@ -268,6 +272,35 @@ const JsonQueryPanel = memo(function JsonQueryPanel({
     setQueryError(null)
     setQueryResult(null)
   }, [])
+
+  const setEnvFromQuery = useCallback(async () => {
+    if (!jsonQuery.trim()) return
+    const outcome = runJsonPathQuery(data, jsonQuery)
+    if (!outcome.ok) {
+      setQueryError(outcome.error)
+      return
+    }
+    const name = envVarName.trim()
+    if (!name) {
+      setQueryError('Enter an environment variable name')
+      return
+    }
+    const activeEnv = environments.find((e) => e.isActive)
+    if (!activeEnv) {
+      setQueryError('No active environment')
+      return
+    }
+    const value =
+      typeof outcome.result === 'object' ? JSON.stringify(outcome.result) : String(outcome.result ?? '')
+    const vars = activeEnv.variables.map((v) => ({ ...v }))
+    const idx = vars.findIndex((v) => v.key === name)
+    if (idx >= 0) vars[idx] = { ...vars[idx], value, enabled: true }
+    else vars.push({ id: uuidv4(), key: name, value, enabled: true })
+    await window.lisek.environments.save({ ...activeEnv, variables: vars })
+    await loadEnvironments()
+    setQueryError(null)
+    setQueryResult(`Set {{${name}}} = ${value}`)
+  }, [data, jsonQuery, envVarName, environments, loadEnvironments])
 
   if (!open) return null
 
@@ -325,6 +358,26 @@ const JsonQueryPanel = memo(function JsonQueryPanel({
               sx={{ p: 0.25 }}
             >
               <SearchIcon sx={{ fontSize: 14 }} />
+            </IconButton>
+          </span>
+        </Tooltip>
+        <TextField
+          size="small"
+          placeholder="env var"
+          value={envVarName}
+          onChange={(e) => setEnvVarName(e.target.value)}
+          sx={{ width: 88, '& .MuiInputBase-root': { height: 24 }, '& .MuiInputBase-input': { py: 0.25, px: 0.5, fontSize: 11 } }}
+        />
+        <Tooltip title="Set active environment variable from JSONPath result">
+          <span>
+            <IconButton
+              size="small"
+              onClick={() => void setEnvFromQuery()}
+              disabled={!jsonQuery.trim() || !envVarName.trim()}
+              aria-label="Set environment variable"
+              sx={{ p: 0.25 }}
+            >
+              <BoltIcon sx={{ fontSize: 14 }} />
             </IconButton>
           </span>
         </Tooltip>

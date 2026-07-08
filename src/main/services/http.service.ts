@@ -88,7 +88,7 @@ export async function sendHttpRequest(
   payload: HttpRequestPayload,
   envVars: KeyValue[] = [],
   collectionVars: KeyValue[] = [],
-  options: { sslVerify?: boolean; timeoutMs?: number; followRedirects?: boolean } = {}
+  options: { sslVerify?: boolean; timeoutMs?: number; followRedirects?: boolean; proxyUrl?: string } = {}
 ): Promise<HttpResponse> {
   const requestId = payload.requestId || 'default'
   const controller = new AbortController()
@@ -173,7 +173,8 @@ export async function sendHttpRequest(
       },
       {
         sslVerify,
-        followRedirects: options.followRedirects !== false
+        followRedirects: options.followRedirects !== false,
+        proxyUrl: options.proxyUrl
       }
     )
 

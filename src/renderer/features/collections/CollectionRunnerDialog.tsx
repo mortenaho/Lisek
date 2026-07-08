@@ -13,14 +13,17 @@ import {
   ListItemText,
   LinearProgress,
   FormControlLabel,
-  Checkbox
+  Checkbox,
+  TextField
 } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import CancelIcon from '@mui/icons-material/Cancel'
 import PlayArrowIcon from '@mui/icons-material/PlayArrow'
+import FileDownloadIcon from '@mui/icons-material/FileDownload'
 import { useState } from 'react'
-import type { CollectionModel, CollectionRunResult } from '@shared/types'
+import type { CollectionModel, CollectionRunReport, CollectionRunResult } from '@shared/types'
+import { useAppStore } from '../../stores/appStore'
 
 interface Props {
   open: boolean
@@ -29,20 +32,51 @@ interface Props {
 }
 
 export default function CollectionRunnerDialog({ open, collection, onClose }: Props) {
+  const settings = useAppStore((s) => s.settings)
   const [running, setRunning] = useState(false)
   const [stopOnFailure, setStopOnFailure] = useState(true)
+  const [iterations, setIterations] = useState(settings.runnerIterations ?? 1)
+  const [delayMs, setDelayMs] = useState(settings.runnerDelayMs ?? 0)
   const [results, setResults] = useState<CollectionRunResult[]>([])
+  const [report, setReport] = useState<CollectionRunReport | null>(null)
 
   const run = async () => {
     if (!collection) return
     setRunning(true)
     setResults([])
+    setReport(null)
+    const startedAt = Date.now()
     try {
-      const outcome = await window.lisek.runner.runCollection(collection.id, stopOnFailure)
+      const outcome = await window.lisek.runner.runCollection(collection.id, {
+        stopOnFailure,
+        iterations,
+        delayMs
+      })
       setResults(outcome)
+      setReport({
+        collectionId: collection.id,
+        collectionName: collection.name,
+        startedAt,
+        finishedAt: Date.now(),
+        iterations,
+        delayMs,
+        results: outcome,
+        passed: outcome.filter((r) => r.passed).length,
+        failed: outcome.filter((r) => !r.passed).length
+      })
     } finally {
       setRunning(false)
     }
+  }
+
+  const exportReport = async (format: 'json' | 'html') => {
+    if (!report) return
+    const ext = format === 'json' ? 'json' : 'html'
+    const path = await window.lisek.dialog.saveFile(`${collection?.name || 'report'}.${ext}`, [
+      { name: format.toUpperCase(), extensions: [ext] }
+    ])
+    if (!path) return
+    await window.lisek.runner.exportReport(report, path, format)
   }
 
   const passed = results.filter((r) => r.passed).length
@@ -58,6 +92,24 @@ export default function CollectionRunnerDialog({ open, collection, onClose }: Pr
         </IconButton>
       </DialogTitle>
       <DialogContent dividers>
+        <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
+          <TextField
+            label="Iterations"
+            type="number"
+            size="small"
+            value={iterations}
+            onChange={(e) => setIterations(Math.max(1, parseInt(e.target.value, 10) || 1))}
+            sx={{ width: 120 }}
+          />
+          <TextField
+            label="Delay (ms)"
+            type="number"
+            size="small"
+            value={delayMs}
+            onChange={(e) => setDelayMs(Math.max(0, parseInt(e.target.value, 10) || 0))}
+            sx={{ width: 120 }}
+          />
+        </Box>
         <FormControlLabel
           control={
             <Checkbox checked={stopOnFailure} onChange={(e) => setStopOnFailure(e.target.checked)} />
@@ -72,8 +124,8 @@ export default function CollectionRunnerDialog({ open, collection, onClose }: Pr
           </Typography>
         )}
         <List dense disablePadding sx={{ maxHeight: 360, overflow: 'auto' }}>
-          {results.map((result) => (
-            <ListItem key={result.requestId} sx={{ py: 0.5 }}>
+          {results.map((result, idx) => (
+            <ListItem key={`${result.requestId}-${result.iteration ?? 0}-${idx}`} sx={{ py: 0.5 }}>
               <ListItemIcon sx={{ minWidth: 32 }}>
                 {result.passed ? (
                   <CheckCircleIcon color="success" fontSize="small" />
@@ -82,7 +134,7 @@ export default function CollectionRunnerDialog({ open, collection, onClose }: Pr
                 )}
               </ListItemIcon>
               <ListItemText
-                primary={result.requestName}
+                primary={`${result.requestName}${result.iteration && result.iteration > 1 ? ` (#${result.iteration})` : ''}`}
                 secondary={
                   result.error
                     ? `${result.statusCode || 'ERR'} · ${result.error}`
@@ -103,6 +155,17 @@ export default function CollectionRunnerDialog({ open, collection, onClose }: Pr
         )}
       </DialogContent>
       <DialogActions>
+        {report && (
+          <>
+            <Button startIcon={<FileDownloadIcon />} onClick={() => void exportReport('json')}>
+              Export JSON
+            </Button>
+            <Button startIcon={<FileDownloadIcon />} onClick={() => void exportReport('html')}>
+              Export HTML
+            </Button>
+          </>
+        )}
+        <Box sx={{ flex: 1 }} />
         <Button onClick={onClose}>Close</Button>
         <Button
           variant="contained"

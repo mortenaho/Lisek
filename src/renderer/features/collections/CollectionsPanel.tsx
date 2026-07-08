@@ -404,7 +404,7 @@ export default function CollectionsPanel() {
     setNewCollectionOpen(false)
   }
 
-  const exportCollection = async (collectionId: string, format: 'postman' | 'openapi') => {
+  const exportCollection = async (collectionId: string, format: 'postman' | 'openapi' | 'insomnia') => {
     setMenuAnchor(null)
     const col = collections.find((c) => c.id === collectionId)
     const safeName = (col?.name || 'collection').replace(/[^\w.-]+/g, '_')
@@ -415,6 +415,8 @@ export default function CollectionsPanel() {
     if (!filePath) return
     if (format === 'postman') {
       await window.lisek.export.postman(collectionId, filePath)
+    } else if (format === 'insomnia') {
+      await window.lisek.export.insomnia(collectionId, filePath)
     } else {
       await window.lisek.export.openapi(collectionId, filePath)
     }
@@ -724,6 +726,12 @@ export default function CollectionsPanel() {
                 <FileDownloadIcon fontSize="small" />
               </ListItemIcon>
               Export as OpenAPI
+            </MenuItem>
+            <MenuItem onClick={() => void exportCollection(menuAnchor.target.item.id, 'insomnia')}>
+              <ListItemIcon>
+                <FileDownloadIcon fontSize="small" />
+              </ListItemIcon>
+              Export as Insomnia
             </MenuItem>
           </>
         )}
