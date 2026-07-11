@@ -9,7 +9,7 @@ on:
       tag:
         description: 'Release tag to upload assets to'
         required: true
-        default: 'v1.6.0'
+        default: 'v1.6.1'
 
 permissions:
   contents: write
@@ -30,16 +30,18 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build Windows installer
+      - name: Build Windows installer and zip
         run: npm run dist:ci
 
-      - name: Prepare stable download filename
+      - name: Prepare stable download filenames
         shell: pwsh
         run: |
           $installer = Get-ChildItem dist-installer/*.exe | Where-Object { $_.Name -ne 'Lisek-Setup.exe' } | Select-Object -First 1
           if (-not $installer) { throw 'Installer not found in dist-installer/' }
           Copy-Item $installer.FullName dist-installer/Lisek-Setup.exe -Force
-          Get-ChildItem dist-installer/*.exe | Format-Table Name, Length
+          $zip = Get-ChildItem dist-installer/*-win.zip | Select-Object -First 1
+          if ($zip) { Copy-Item $zip.FullName dist-installer/Lisek-win.zip -Force }
+          Get-ChildItem dist-installer/*.exe, dist-installer/*-win.zip | Format-Table Name, Length
 
       - name: Create GitHub Release (if needed)
         env:
@@ -53,8 +55,48 @@ jobs:
             gh release create $tag --generate-notes --title $tag
           }
 
-      - name: Upload to GitHub Release
+      - name: Upload Windows assets
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
-        run: gh release upload "$env:RELEASE_TAG" dist-installer/Lisek-Setup.exe --clobber
+        run: gh release upload "$env:RELEASE_TAG" dist-installer/Lisek-Setup.exe dist-installer/Lisek-win.zip --clobber
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Linux AppImage and tar.gz
+        run: npm run build && npx electron-builder --linux AppImage tar.gz -p never
+
+      - name: Prepare stable download filenames
+        run: |
+          appimage=$(ls dist-installer/*.AppImage | head -1)
+          tarball=$(ls dist-installer/*.tar.gz | head -1)
+          cp "$appimage" dist-installer/Lisek.AppImage
+          cp "$tarball" dist-installer/Lisek-linux.tar.gz
+          ls -lh dist-installer/Lisek.AppImage dist-installer/Lisek-linux.tar.gz
+
+      - name: Create GitHub Release (if needed)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+        run: |
+          tag="$RELEASE_TAG"
+          gh release view "$tag" 2>/dev/null || gh release create "$tag" --generate-notes --title "$tag"
+
+      - name: Upload Linux assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+        run: gh release upload "$RELEASE_TAG" dist-installer/Lisek.AppImage dist-installer/Lisek-linux.tar.gz --clobber
