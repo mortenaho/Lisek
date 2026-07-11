@@ -40,12 +40,14 @@
         </p>
         <div class="badges">
           <span class="badge">Windows</span>
+          <span class="badge">Linux</span>
           <span class="badge">Offline-first</span>
           <span class="badge">MIT License</span>
-          <span class="badge">v1.6.0</span>
+          <span class="badge">v1.6.1</span>
         </div>
         <div class="actions">
           <a class="btn btn-primary" href="https://github.com/mortenaho/Lisek/releases/latest/download/Lisek-Setup.exe">Download for Windows</a>
+          <a class="btn btn-secondary" href="https://github.com/mortenaho/Lisek/releases/latest/download/Lisek.AppImage">Download for Linux</a>
           <a class="btn btn-secondary" href="https://github.com/mortenaho/Lisek">View on GitHub</a>
         </div>
         <div class="hero-preview" aria-hidden="true">
@@ -148,16 +150,16 @@
 
     <section id="whats-new" class="features-section">
       <div class="container">
-        <h2 class="section-title">What&rsquo;s new in v1.6</h2>
+        <h2 class="section-title">What&rsquo;s new in v1.6.1</h2>
         <ul class="changelog-list">
+          <li><strong>Linux builds</strong> — AppImage and tar.gz packages for Linux x64</li>
+          <li><strong>OpenAPI / Swagger bodies</strong> — import fills request bodies from schemas, examples, and Swagger 2 <code>in: body</code> params</li>
           <li><strong>Mock Server</strong> — local HTTP stubs with JSON, text, and file responses; route editor and live status indicator</li>
           <li><strong>Plugins</strong> — Base64, URL encode, hashes, JWT decode, AES crypto</li>
           <li><strong>Bruno &amp; HAR</strong> — import and export collections; HAR capture import</li>
           <li><strong>Scheduled requests</strong> — run saved requests on an interval</li>
           <li><strong>Git folder sync</strong> — link collections to a directory</li>
           <li><strong>SSE &amp; GraphQL subscriptions</strong> — streaming protocol support</li>
-          <li><strong>Binary preview</strong> — image and PDF responses; binary download</li>
-          <li><strong>Data-driven runner</strong> — CSV/JSON iteration in collection runs</li>
         </ul>
       </div>
     </section>
@@ -167,10 +169,27 @@
         <h2 class="section-title">Download</h2>
         <div class="download-box">
           <p>
-            Lisek runs on Windows 10/11 (x64). Click below to download the installer.
+            Lisek runs on Windows 10/11 and Linux (x64). Pick a build below.
           </p>
-          <div class="actions">
-            <a class="btn btn-primary" href="https://github.com/mortenaho/Lisek/releases/latest/download/Lisek-Setup.exe">Lisek-Setup.exe</a>
+          <div class="download-platforms">
+            <article class="download-platform">
+              <h3>Windows</h3>
+              <p>Installer or portable zip for Windows 10/11 (x64).</p>
+              <div class="actions">
+                <a class="btn btn-primary" href="https://github.com/mortenaho/Lisek/releases/latest/download/Lisek-Setup.exe">Lisek-Setup.exe</a>
+                <a class="btn btn-secondary" href="https://github.com/mortenaho/Lisek/releases/latest/download/Lisek-win.zip">Lisek-win.zip</a>
+              </div>
+            </article>
+            <article class="download-platform">
+              <h3>Linux</h3>
+              <p>AppImage (run directly) or tar.gz archive for Linux x64.</p>
+              <div class="actions">
+                <a class="btn btn-primary" href="https://github.com/mortenaho/Lisek/releases/latest/download/Lisek.AppImage">Lisek.AppImage</a>
+                <a class="btn btn-secondary" href="https://github.com/mortenaho/Lisek/releases/latest/download/Lisek-linux.tar.gz">Lisek-linux.tar.gz</a>
+              </div>
+            </article>
+          </div>
+          <div class="actions" style="margin-top: 1.25rem;">
             <a class="btn btn-secondary" href="https://github.com/mortenaho/Lisek/releases/latest">All releases</a>
             <a class="btn btn-secondary" href="https://github.com/mortenaho/Lisek#development">Build from source</a>
           </div>
@@ -178,10 +197,11 @@
             If Windows shows <strong>&ldquo;Windows protected your PC&rdquo;</strong>, click
             <strong>More info</strong>, then <strong>Run anyway</strong>.
             Lisek is open source and not code-signed yet.
+            On Linux, make the AppImage executable: <code>chmod +x Lisek.AppImage</code>
           </p>
           <p class="download-url">
-            Direct link:
-            <a href="https://github.com/mortenaho/Lisek/releases/latest/download/Lisek-Setup.exe">github.com/mortenaho/Lisek/releases/latest/download/Lisek-Setup.exe</a>
+            Latest release:
+            <a href="https://github.com/mortenaho/Lisek/releases/latest">github.com/mortenaho/Lisek/releases/latest</a>
           </p>
         </div>
       </div>
@@ -206,7 +226,7 @@
 
   <footer class="site-footer">
     <div class="container footer-row">
-      <span>MIT License · Lisek v1.6.0</span>
+      <span>MIT License · Lisek v1.6.1</span>
       <span>
         Built by
         <a href="https://mortenaho.ir">Seyed Morteza Hosseini</a>

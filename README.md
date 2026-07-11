@@ -4,7 +4,7 @@ Offline desktop API client for **HTTP**, **GraphQL**, **WebSocket**, **SSE**, an
 
 **Website:** [mortenaho.github.io/Lisek](https://mortenaho.github.io/Lisek)
 
-**Download (Windows):** [Lisek-Setup.exe](https://github.com/mortenaho/Lisek/releases/latest/download/Lisek-Setup.exe)
+**Download:** [Windows installer](https://github.com/mortenaho/Lisek/releases/latest/download/Lisek-Setup.exe) · [Linux AppImage](https://github.com/mortenaho/Lisek/releases/latest/download/Lisek.AppImage) · [All releases](https://github.com/mortenaho/Lisek/releases/latest)
 
 ![Lisek tour](docs/screenshots/lisek-tour.gif)
 
@@ -190,11 +190,11 @@ Live at **https://mortenaho.github.io/Lisek/**
 
 ## Releases
 
-Push a version tag to trigger the Windows build workflow:
+Push a version tag to trigger the Windows + Linux build workflow:
 
 ```bash
-git tag v1.6.0
-git push origin v1.6.0
+git tag v1.6.1
+git push origin v1.6.1
 ```
 
 Or run **Actions → Release → Run workflow** with the tag name.

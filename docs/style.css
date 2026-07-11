@@ -352,9 +352,45 @@ section {
   text-align: center;
 }
 
+.download-platforms {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+  margin-bottom: 0.25rem;
+  text-align: left;
+}
+
+.download-platform {
+  background: rgba(11, 15, 23, 0.45);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+}
+
+.download-platform h3 {
+  margin: 0 0 0.4rem;
+  font-size: 1.05rem;
+}
+
+.download-platform p {
+  margin: 0 0 1rem !important;
+  font-size: 0.92rem;
+}
+
+.download-platform .actions {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+
 .download-box p {
   margin: 0 0 1.25rem;
   color: var(--text-muted);
+}
+
+.download-box code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.85em;
+  color: var(--cyan);
 }
 
 .install-note {
