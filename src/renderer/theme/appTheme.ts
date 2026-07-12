@@ -2,18 +2,18 @@ import { createTheme, type ThemeOptions } from '@mui/material/styles'
 import { APP_TOOLTIP_Z_INDEX } from './zIndex'
 
 const primaryLight = {
-  main: '#560072',
-  light: '#8a3d9e',
-  dark: '#3a004d',
+  main: '#0D9488',
+  light: '#14B8A6',
+  dark: '#0F766E',
   contrastText: '#ffffff'
 }
 
-/** Brighter primary for dark mode — dark purple is invisible on dark surfaces. */
+/** Brighter primary for dark mode — teal stays readable on dark surfaces. */
 const primaryDark = {
-  main: '#c084fc',
-  light: '#e9d5ff',
-  dark: '#9333ea',
-  contrastText: '#1e1030'
+  main: '#2DD4BF',
+  light: '#5eead4',
+  dark: '#0D9488',
+  contrastText: '#042f2e'
 }
 
 const sharedComponents: ThemeOptions['components'] = {
@@ -41,7 +41,7 @@ const sharedComponents: ThemeOptions['components'] = {
               '&:hover': {
                 borderColor: theme.palette.primary.light,
                 color: theme.palette.primary.light,
-                backgroundColor: 'rgba(192, 132, 252, 0.12)'
+                backgroundColor: 'rgba(45, 212, 191, 0.12)'
               },
               '& .MuiButton-startIcon, & .MuiButton-endIcon, & .MuiSvgIcon-root': {
                 color: 'inherit'
@@ -139,10 +139,10 @@ const sharedComponents: ThemeOptions['components'] = {
       root: ({ theme }) => ({
         '&.Mui-selected': {
           backgroundColor:
-            theme.palette.mode === 'dark' ? 'rgba(192, 132, 252, 0.18)' : undefined,
+            theme.palette.mode === 'dark' ? 'rgba(45, 212, 191, 0.18)' : undefined,
           '&:hover': {
             backgroundColor:
-              theme.palette.mode === 'dark' ? 'rgba(192, 132, 252, 0.26)' : undefined
+              theme.palette.mode === 'dark' ? 'rgba(45, 212, 191, 0.26)' : undefined
           }
         },
         '&:hover': {
@@ -228,14 +228,14 @@ const sharedComponents: ThemeOptions['components'] = {
         borderRadius: 0,
         '&.Mui-selected': {
           backgroundColor:
-            theme.palette.mode === 'dark' ? 'rgba(192, 132, 252, 0.2)' : 'rgba(86, 0, 114, 0.12)',
+            theme.palette.mode === 'dark' ? 'rgba(45, 212, 191, 0.2)' : 'rgba(13, 148, 136, 0.12)',
           color: theme.palette.mode === 'dark' ? '#f8fafc' : theme.palette.text.primary,
           '& .MuiListItemIcon-root': {
             color: theme.palette.mode === 'dark' ? theme.palette.primary.light : theme.palette.primary.main
           },
           '&:hover': {
             backgroundColor:
-              theme.palette.mode === 'dark' ? 'rgba(192, 132, 252, 0.28)' : 'rgba(86, 0, 114, 0.16)'
+              theme.palette.mode === 'dark' ? 'rgba(45, 212, 191, 0.28)' : 'rgba(13, 148, 136, 0.16)'
           }
         }
       })
@@ -279,7 +279,7 @@ const sharedComponents: ThemeOptions['components'] = {
           '&.Mui-selected': {
             color: theme.palette.text.primary,
             backgroundColor:
-              theme.palette.mode === 'dark' ? 'rgba(192, 132, 252, 0.16)' : 'rgba(0, 0, 0, 0.06)'
+              theme.palette.mode === 'dark' ? 'rgba(45, 212, 191, 0.16)' : 'rgba(0, 0, 0, 0.06)'
           },
           '&:hover': {
             backgroundColor:
@@ -417,7 +417,7 @@ export function createAppTheme(mode: 'light' | 'dark') {
             action: {
               active: '#e2e8f0',
               hover: 'rgba(148, 163, 184, 0.1)',
-              selected: 'rgba(192, 132, 252, 0.16)',
+              selected: 'rgba(45, 212, 191, 0.16)',
               disabled: 'rgba(148, 163, 184, 0.38)',
               disabledBackground: 'rgba(148, 163, 184, 0.08)'
             }

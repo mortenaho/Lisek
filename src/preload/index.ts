@@ -166,7 +166,14 @@ const lisek: LisekAPI = {
     writeText: (text) => ipcRenderer.invoke('clipboard:writeText', text)
   },
   app: {
-    getInfo: () => ipcRenderer.invoke('app:getInfo')
+    getInfo: () => ipcRenderer.invoke('app:getInfo'),
+    checkForUpdate: () => ipcRenderer.invoke('app:checkForUpdate'),
+    onUpdateAvailable: (callback) => {
+      const handler = (_: unknown, result: import('../../shared/types').UpdateCheckResult) =>
+        callback(result)
+      ipcRenderer.on('update:available', handler)
+      return () => ipcRenderer.removeListener('update:available', handler)
+    }
   },
   shell: {
     openExternal: (url) => ipcRenderer.invoke('shell:openExternal', url)

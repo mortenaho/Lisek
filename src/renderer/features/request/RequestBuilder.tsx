@@ -19,7 +19,7 @@ import CloseIcon from '@mui/icons-material/Close'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import SendIcon from '@mui/icons-material/Send'
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
-import { memo, useCallback, useEffect, useMemo, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import CodeEditor from '../../components/CodeEditor'
 import ContentTypeSelect from '../../components/ContentTypeSelect'
 import { effectiveContentType, isJsonContentType, languageForContentType } from '../../utils/contentTypes'
@@ -35,11 +35,18 @@ import GrpcTab from './GrpcTab'
 import SseTab from './SseTab'
 import ScriptsTab from './ScriptsTab'
 import ConfirmDialog from '../../components/ConfirmDialog'
+import ResizeHandle, { clamp, readStoredSize, storeSize } from '../../components/ResizeHandle'
+import ResponsePanel from '../response/ResponsePanel'
 import { resolveCollectionVariables } from '@shared/collectionVariables'
 import VariableInput from '../../components/VariableInput'
 import { COMPACT } from '../../theme/compact'
 import { applyControlledInputChange } from '../../utils/inputSelection'
 import type { BodyType, HttpMethod, KeyValue, Protocol } from '@shared/types'
+
+const RESPONSE_MIN = 280
+const RESPONSE_MAX = 720
+const RESPONSE_DEFAULT = 420
+const STORAGE_RESPONSE = 'lisek:response-width'
 
 const METHOD_COLORS: Record<HttpMethod, string> = {
   GET: '#61affe',
@@ -118,8 +125,8 @@ const SendButton = memo(function SendButton({
         '&:hover': {
           boxShadow: (t) =>
             t.palette.mode === 'dark'
-              ? '0 2px 12px rgba(192, 132, 252, 0.35)'
-              : '0 2px 8px rgba(86, 0, 114, 0.25)'
+              ? '0 2px 12px rgba(45, 212, 191, 0.35)'
+              : '0 2px 8px rgba(13, 148, 136, 0.25)'
         }
       }}
     >
@@ -140,6 +147,27 @@ function RequestBuilderForm({
   const snippetOpen = useAppStore((s) => s.snippetOpen)
   const [section, setSection] = useState<RequestSection>('params')
   const [jsonFormatError, setJsonFormatError] = useState<string | null>(null)
+  const [tagsText, setTagsText] = useState(() => (request.tags || []).join(', '))
+  const [responseWidth, setResponseWidth] = useState(() =>
+    clamp(readStoredSize(STORAGE_RESPONSE, RESPONSE_DEFAULT), RESPONSE_MIN, RESPONSE_MAX)
+  )
+  const responseWrapRef = useRef<HTMLDivElement>(null)
+  const responseWidthRef = useRef(responseWidth)
+  responseWidthRef.current = responseWidth
+
+  const applyResponseWidth = useCallback((width: number) => {
+    if (responseWrapRef.current) responseWrapRef.current.style.width = `${width}px`
+  }, [])
+
+  const getResponseMax = useCallback(
+    () => Math.min(RESPONSE_MAX, Math.floor(window.innerWidth * 0.55)),
+    []
+  )
+
+  const commitResponseWidth = useCallback((width: number) => {
+    setResponseWidth(width)
+    storeSize(STORAGE_RESPONSE, width)
+  }, [])
 
   const paramCount = useMemo(() => countActive(request.params), [request.params])
   const headerCount = useMemo(() => countActive(request.headers), [request.headers])
@@ -164,6 +192,10 @@ function RequestBuilderForm({
   useEffect(() => {
     if (request.bodyType !== 'none') setSection('body')
   }, [request.id, request.bodyType])
+
+  useEffect(() => {
+    setTagsText((request.tags || []).join(', '))
+  }, [request.id])
 
   const handleSend = useCallback(async () => {
     flush()
@@ -246,156 +278,187 @@ function RequestBuilderForm({
   const bodyLanguage = languageForContentType(request.bodyRawContentType)
 
   return (
-    <Box sx={{ p: 1, height: '100%', display: 'flex', flexDirection: 'column' }} onKeyDown={handleKeyDown}>
-      <Box
-        sx={{
-          display: 'flex',
-          gap: 0.75,
-          mb: 1,
-          alignItems: 'center',
-          flexWrap: 'nowrap',
-          flexShrink: 0
-        }}
-      >
-        <Select
-          size="small"
-          value={request.protocol}
-          onChange={(e) => patch({ protocol: e.target.value as Protocol })}
-          sx={{ minWidth: 72, ...COMPACT.select }}
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0 }} onKeyDown={handleKeyDown}>
+      <Box sx={{ px: 1, pt: 1, pb: 0.75, flexShrink: 0, borderBottom: 1, borderColor: 'divider', bgcolor: 'background.paper' }}>
+        <Box
+          sx={{
+            display: 'flex',
+            gap: 0.75,
+            mb: 0.75,
+            alignItems: 'center',
+            flexWrap: 'nowrap'
+          }}
         >
-          {PROTOCOLS.map((p) => (
-            <MenuItem key={p} value={p} sx={{ fontSize: 11 }}>
-              {p.toUpperCase()}
-            </MenuItem>
-          ))}
-        </Select>
-        {request.protocol === 'http' || request.protocol === 'graphql' ? (
-          <>
-            <Select
+          <Select
+            size="small"
+            value={request.protocol}
+            onChange={(e) => patch({ protocol: e.target.value as Protocol })}
+            sx={{ minWidth: 72, ...COMPACT.select }}
+          >
+            {PROTOCOLS.map((p) => (
+              <MenuItem key={p} value={p} sx={{ fontSize: 11 }}>
+                {p.toUpperCase()}
+              </MenuItem>
+            ))}
+          </Select>
+          {request.protocol === 'http' || request.protocol === 'graphql' ? (
+            <>
+              <Select
+                size="small"
+                value={request.method}
+                onChange={(e) => patch({ method: e.target.value as HttpMethod })}
+                sx={{
+                  minWidth: 72,
+                  ...COMPACT.select,
+                  bgcolor: METHOD_COLORS[request.method],
+                  color: '#fff',
+                  fontWeight: 700,
+                  '.MuiOutlinedInput-notchedOutline': { border: 'none' },
+                  '.MuiSvgIcon-root': { color: '#fff' },
+                  '.MuiSelect-select': { color: '#fff !important' }
+                }}
+              >
+                {METHODS.map((m) => (
+                  <MenuItem key={m} value={m} sx={{ fontSize: 11 }}>
+                    {m}
+                  </MenuItem>
+                ))}
+              </Select>
+              <VariableInput
+                syncKey={request.id}
+                value={request.url}
+                onChange={patchUrl}
+                onEnter={handleUrlEnter}
+                placeholder="https://api.example.com or {{baseUrl}}/path"
+                collectionVariables={collectionVariables}
+              />
+            </>
+          ) : request.protocol === 'websocket' ? (
+            <TextField
               size="small"
-              value={request.method}
-              onChange={(e) => patch({ method: e.target.value as HttpMethod })}
-              sx={{
-                minWidth: 72,
-                ...COMPACT.select,
-                bgcolor: METHOD_COLORS[request.method],
-                color: '#fff',
-                fontWeight: 700,
-                '.MuiOutlinedInput-notchedOutline': { border: 'none' },
-                '.MuiSvgIcon-root': { color: '#fff' },
-                '.MuiSelect-select': { color: '#fff !important' }
-              }}
-            >
-              {METHODS.map((m) => (
-                <MenuItem key={m} value={m} sx={{ fontSize: 11 }}>
-                  {m}
-                </MenuItem>
-              ))}
-            </Select>
-            <VariableInput
-              syncKey={request.id}
-              value={request.url}
-              onChange={patchUrl}
-              onEnter={handleUrlEnter}
-              placeholder="https://api.example.com or {{baseUrl}}/path"
-              collectionVariables={collectionVariables}
+              fullWidth
+              placeholder="ws://localhost:8080"
+              value={request.wsUrl}
+              onChange={(e) =>
+                applyControlledInputChange(e.target, request.wsUrl, e.target.value, (v) => patch({ wsUrl: v }))
+              }
+              onKeyDown={handleUrlFieldKeyDown}
+              sx={COMPACT.input}
             />
-          </>
-        ) : request.protocol === 'websocket' ? (
+          ) : request.protocol === 'sse' ? (
+            <TextField
+              size="small"
+              fullWidth
+              placeholder="https://api.example.com/events"
+              value={request.sseUrl}
+              onChange={(e) =>
+                applyControlledInputChange(e.target, request.sseUrl, e.target.value, (v) => patch({ sseUrl: v, url: v }))
+              }
+              onKeyDown={handleUrlFieldKeyDown}
+              sx={COMPACT.input}
+            />
+          ) : (
+            <TextField
+              size="small"
+              fullWidth
+              placeholder="localhost:50051"
+              value={request.grpcTarget}
+              onChange={(e) =>
+                applyControlledInputChange(e.target, request.grpcTarget, e.target.value, (v) =>
+                  patch({ grpcTarget: v })
+                )
+              }
+              onKeyDown={handleUrlFieldKeyDown}
+              sx={COMPACT.input}
+            />
+          )}
+          <SendButton onSend={handleSend} onCancel={() => void handleCancel()} />
+          {request.id && (
+            <Tooltip title="Delete request">
+              <IconButton color="error" onClick={onDelete} sx={COMPACT.iconBtn}>
+                <DeleteOutlineIcon sx={COMPACT.icon} />
+              </IconButton>
+            </Tooltip>
+          )}
+        </Box>
+
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
           <TextField
             size="small"
-            fullWidth
-            placeholder="ws://localhost:8080"
-            value={request.wsUrl}
-            onChange={(e) =>
-              applyControlledInputChange(e.target, request.wsUrl, e.target.value, (v) => patch({ wsUrl: v }))
-            }
-            onKeyDown={handleUrlFieldKeyDown}
-            sx={COMPACT.input}
+            placeholder="Tags: smoke, api"
+            value={tagsText}
+            onChange={(e) => {
+              applyControlledInputChange(e.target, tagsText, e.target.value, (raw) => {
+                setTagsText(raw)
+                patch({
+                  tags: raw
+                    .split(',')
+                    .map((t) => t.trim())
+                    .filter(Boolean)
+                })
+              })
+            }}
+            sx={{ minWidth: 140, flex: 1, ...COMPACT.input }}
           />
-        ) : request.protocol === 'sse' ? (
           <TextField
             size="small"
-            fullWidth
-            placeholder="https://api.example.com/events"
-            value={request.sseUrl}
-            onChange={(e) =>
-              applyControlledInputChange(e.target, request.sseUrl, e.target.value, (v) => patch({ sseUrl: v, url: v }))
-            }
-            onKeyDown={handleUrlFieldKeyDown}
-            sx={COMPACT.input}
-          />
-        ) : (
-          <TextField
-            size="small"
-            fullWidth
-            placeholder="localhost:50051"
-            value={request.grpcTarget}
-            onChange={(e) =>
-              applyControlledInputChange(e.target, request.grpcTarget, e.target.value, (v) =>
-                patch({ grpcTarget: v })
+            placeholder="Notes (optional)"
+            value={request.notes || ''}
+            onChange={(e) => {
+              applyControlledInputChange(e.target, request.notes || '', e.target.value, (v) =>
+                patch({ notes: v })
               )
-            }
-            onKeyDown={handleUrlFieldKeyDown}
-            sx={COMPACT.input}
+            }}
+            sx={{ minWidth: 180, flex: 2, ...COMPACT.input }}
           />
-        )}
-        <SendButton onSend={handleSend} onCancel={() => void handleCancel()} />
-        {request.id && (
-          <Tooltip title="Delete request">
-            <IconButton color="error" onClick={onDelete} sx={COMPACT.iconBtn}>
-              <DeleteOutlineIcon sx={COMPACT.icon} />
-            </IconButton>
-          </Tooltip>
-        )}
+        </Box>
       </Box>
 
-      <Box sx={{ display: 'flex', gap: 1, mb: 0.75, flexWrap: 'wrap' }}>
-        <TextField
-          size="small"
-          placeholder="Tags: smoke, api"
-          value={(request.tags || []).join(', ')}
-          onChange={(e) =>
-            patch({
-              tags: e.target.value
-                .split(',')
-                .map((t) => t.trim())
-                .filter(Boolean)
-            })
-          }
-          sx={{ minWidth: 140, flex: 1, ...COMPACT.input }}
-        />
-        <TextField
-          size="small"
-          placeholder="Notes (optional)"
-          value={request.notes || ''}
-          onChange={(e) => patch({ notes: e.target.value })}
-          sx={{ minWidth: 180, flex: 2, ...COMPACT.input }}
-        />
-      </Box>
+      <Box sx={{ flex: 1, minHeight: 0, display: 'flex', overflow: 'hidden' }}>
+        <Box
+          sx={{
+            flex: 1,
+            minWidth: 0,
+            minHeight: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            p: 1,
+            overflow: 'hidden',
+            borderRight: 1,
+            borderColor: 'divider'
+          }}
+        >
+          <Tabs
+            value={section}
+            onChange={(_, v: RequestSection) => setSection(v)}
+            variant="scrollable"
+            scrollButtons="auto"
+            sx={{
+              minHeight: 28,
+              flexShrink: 0,
+              borderBottom: 1,
+              borderColor: 'divider',
+              '& .MuiTabs-indicator': { height: 2 },
+              '& .MuiTab-root': COMPACT.tabRoot
+            }}
+          >
+            <Tab value="params" label={<TabLabel label="Params" count={paramCount} />} />
+            <Tab value="headers" label={<TabLabel label="Headers" count={headerCount} />} />
+            <Tab value="body" label="Body" />
+            <Tab value="auth" label={<TabLabel label="Auth" count={hasAuth ? 1 : 0} />} />
+            <Tab value="scripts" label={<TabLabel label="Scripts" count={hasScripts ? 1 : 0} />} />
+            {protocolTabLabel && <Tab value="protocol" label={protocolTabLabel} />}
+          </Tabs>
 
-      <Tabs
-        value={section}
-        onChange={(_, v: RequestSection) => setSection(v)}
-        variant="scrollable"
-        scrollButtons="auto"
-        sx={{
-          minHeight: 28,
-          borderBottom: 1,
-          borderColor: 'divider',
-          '& .MuiTabs-indicator': { height: 2 },
-          '& .MuiTab-root': COMPACT.tabRoot
-        }}
-      >
-        <Tab value="params" label={<TabLabel label="Params" count={paramCount} />} />
-        <Tab value="headers" label={<TabLabel label="Headers" count={headerCount} />} />
-        <Tab value="body" label="Body" />
-        <Tab value="auth" label={<TabLabel label="Auth" count={hasAuth ? 1 : 0} />} />
-        <Tab value="scripts" label={<TabLabel label="Scripts" count={hasScripts ? 1 : 0} />} />
-        {protocolTabLabel && <Tab value="protocol" label={protocolTabLabel} />}
-      </Tabs>
-
-      <RequestTabPanel sx={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+          <RequestTabPanel
+            sx={{
+              flex: 1,
+              minHeight: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: section === 'body' && request.bodyType === 'raw' ? 'hidden' : 'auto'
+            }}
+          >
         {section === 'params' && (
           <KeyValueEditor
             items={request.params}
@@ -443,7 +506,15 @@ function RequestBuilderForm({
         )}
 
         {section === 'body' && (
-          <Box>
+          <Box
+            sx={{
+              flex: 1,
+              minHeight: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: request.bodyType === 'raw' ? 'hidden' : 'auto'
+            }}
+          >
             <ToggleButtonGroup
               exclusive
               size="small"
@@ -451,6 +522,7 @@ function RequestBuilderForm({
               onChange={(_, value: BodyType | null) => value && patch({ bodyType: value })}
               sx={{
                 mb: 1,
+                flexShrink: 0,
                 flexWrap: 'wrap',
                 gap: 0.25,
                 '& .MuiToggleButtonGroup-grouped': {
@@ -491,9 +563,9 @@ function RequestBuilderForm({
             )}
 
             {request.bodyType === 'raw' && (
-              <>
+              <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
                 {isJsonBody && (
-                  <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 0.25 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 0.25, flexShrink: 0 }}>
                     <Tooltip title="Format JSON">
                       <IconButton
                         size="small"
@@ -506,16 +578,16 @@ function RequestBuilderForm({
                     </Tooltip>
                   </Box>
                 )}
-                <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 0.75, overflow: 'hidden' }}>
+                <Box sx={{ flex: 1, minHeight: 160, overflow: 'hidden' }}>
                   <CodeEditor
                     editorKey={`${request.id}-body-${bodyLanguage}`}
-                    height="160px"
+                    height="100%"
                     language={bodyLanguage}
                     value={request.bodyRaw}
                     onChange={patchBodyRaw}
                   />
                 </Box>
-              </>
+              </Box>
             )}
 
             {request.bodyType === 'form-data' && (
@@ -551,7 +623,32 @@ function RequestBuilderForm({
         {section === 'protocol' && request.protocol === 'websocket' && <WebSocketTab />}
         {section === 'protocol' && request.protocol === 'sse' && <SseTab />}
         {section === 'protocol' && request.protocol === 'grpc' && <GrpcTab />}
-      </RequestTabPanel>
+          </RequestTabPanel>
+        </Box>
+
+        <ResizeHandle
+          axis="x"
+          min={RESPONSE_MIN}
+          max={getResponseMax()}
+          getSize={() => responseWidthRef.current}
+          onLiveResize={applyResponseWidth}
+          onCommit={commitResponseWidth}
+          invert
+        />
+
+        <Box
+          ref={responseWrapRef}
+          sx={{
+            width: responseWidth,
+            minWidth: RESPONSE_MIN,
+            flexShrink: 0,
+            overflow: 'hidden',
+            bgcolor: 'background.paper'
+          }}
+        >
+          <ResponsePanel />
+        </Box>
+      </Box>
 
       <Snackbar
         open={!!jsonFormatError}
@@ -572,6 +669,7 @@ function RequestTabBar() {
   const activeTabId = useAppStore((s) => s.activeTabId)
   const switchTab = useAppStore((s) => s.switchTab)
   const closeTab = useAppStore((s) => s.closeTab)
+  const closeAllTabs = useAppStore((s) => s.closeAllTabs)
 
   if (tabs.length === 0) return null
 
@@ -593,6 +691,17 @@ function RequestTabBar() {
           <Box
             key={tab.tabId}
             onClick={() => void switchTab(tab.tabId)}
+            onAuxClick={(e) => {
+              if (e.button === 1) {
+                e.preventDefault()
+                e.stopPropagation()
+                closeTab(tab.tabId)
+              }
+            }}
+            onMouseDown={(e) => {
+              // Prevent middle-click auto-scroll; close on button 1
+              if (e.button === 1) e.preventDefault()
+            }}
             sx={{
               display: 'flex',
               alignItems: 'center',
@@ -627,6 +736,27 @@ function RequestTabBar() {
           </Box>
         )
       })}
+      {tabs.length > 1 && (
+        <Tooltip title="Close all tabs">
+          <Button
+            size="small"
+            onClick={closeAllTabs}
+            sx={{
+              flexShrink: 0,
+              alignSelf: 'center',
+              ml: 'auto',
+              minWidth: 0,
+              px: 1,
+              py: 0.25,
+              textTransform: 'none',
+              fontSize: 11,
+              color: 'text.secondary'
+            }}
+          >
+            Close all
+          </Button>
+        </Tooltip>
+      )}
     </Box>
   )
 }
@@ -675,7 +805,9 @@ function RequestBuilderShell() {
       {hasActiveRequest ? (
         <>
           <RequestEditorProvider key={editorKey} tabId={tabId} requestId={editorKey}>
-            <RequestBuilderForm collectionVariables={collectionVariables} onDelete={openDeleteDialog} />
+            <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+              <RequestBuilderForm collectionVariables={collectionVariables} onDelete={openDeleteDialog} />
+            </Box>
           </RequestEditorProvider>
           <ConfirmDialog
             open={deleteOpen}

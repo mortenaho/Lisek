@@ -3,7 +3,6 @@ node_modules/
 
 # Build output (electron-vite)
 out/
-
 # Installers & packaging
 dist/
 dist-installer/
@@ -12,7 +11,6 @@ release/
 *.exe
 *.blockmap
 *.7z
-
 # Logs
 logs/
 *.log
@@ -20,42 +18,35 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-
 # Environment & secrets
 .env
 .env.*
 !.env.example
-
 # Local databases (dev/test)
 *.db
 *.db-journal
 *.sqlite
 *.sqlite3
-
 # Test coverage
 coverage/
-
 # TypeScript
 *.tsbuildinfo
-
 # OS files
 .DS_Store
 Thumbs.db
 Desktop.ini
-
 # IDE / editor
 .vscode/
 .idea/
 *.swp
 *~
-
 # Optional tooling
 .drizzle/
 .cache/
 .turbo/
 .eslintcache
-
 # Electron / electron-builder
 win-unpacked/
 mac-unpacked/
 linux-unpacked/
+squashfs-root/

@@ -146,6 +146,9 @@ app.whenReady().then(async () => {
   await reconcileMockServerOnStartup()
   initScheduledJobs()
   createWindow()
+  void import('./services/update.service').then(({ runStartupUpdateCheck }) =>
+    runStartupUpdateCheck(() => mainWindow)
+  )
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

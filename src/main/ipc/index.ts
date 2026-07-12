@@ -405,6 +405,11 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null) {
     version: app.getVersion()
   }))
 
+  ipcMain.handle('app:checkForUpdate', async () => {
+    const { checkForUpdates } = await import('../services/update.service')
+    return checkForUpdates()
+  })
+
   ipcMain.handle('shell:openExternal', (_, url: string) => {
     void shell.openExternal(url)
   })

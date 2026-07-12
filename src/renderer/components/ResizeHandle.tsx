@@ -120,9 +120,11 @@ export default function ResizeHandle({
               '&:hover': { bgcolor: theme.palette.primary.main, opacity: 0.55 }
             }
           : {
-              height: 5,
+              height: 8,
               cursor: 'row-resize',
-              '&:hover': { bgcolor: theme.palette.primary.main, opacity: 0.55 }
+              bgcolor: theme.palette.primary.main,
+              opacity: 0.35,
+              '&:hover': { bgcolor: theme.palette.primary.main, opacity: 0.85 }
             })
       }}
     />

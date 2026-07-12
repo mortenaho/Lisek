@@ -1,6 +1,7 @@
 import { ThemeProvider, CssBaseline, GlobalStyles } from '@mui/material'
 import { useEffect, useMemo } from 'react'
 import MainLayout from './layouts/MainLayout'
+import UpdateNotifier from './features/update/UpdateNotifier'
 import { useAppStore } from './stores/appStore'
 import { createAppTheme } from './theme/appTheme'
 import { APP_TOOLTIP_Z_INDEX } from './theme/zIndex'
@@ -37,6 +38,7 @@ function App() {
         }}
       />
       <MainLayout />
+      <UpdateNotifier />
     </ThemeProvider>
   )
 }

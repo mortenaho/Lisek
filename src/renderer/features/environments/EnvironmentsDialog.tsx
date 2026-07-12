@@ -28,6 +28,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { KeyValue } from '@shared/types'
 import { useAppStore } from '../../stores/appStore'
 import ConfirmDialog from '../../components/ConfirmDialog'
+import { applyControlledInputChange } from '../../utils/inputSelection'
 
 interface Props {
   open: boolean
@@ -238,7 +239,11 @@ export default function EnvironmentsDialog({ open, onClose }: Props) {
                       size="small"
                       placeholder="Variable"
                       value={v.key}
-                      onChange={(e) => updateVar(i, 'key', e.target.value)}
+                      onChange={(e) => {
+                        applyControlledInputChange(e.target, v.key, e.target.value, (val) =>
+                          updateVar(i, 'key', val)
+                        )
+                      }}
                       sx={{ flex: 1 }}
                     />
                     <TextField
@@ -246,7 +251,11 @@ export default function EnvironmentsDialog({ open, onClose }: Props) {
                       placeholder="Value"
                       type={v.secret ? 'password' : 'text'}
                       value={v.value}
-                      onChange={(e) => updateVar(i, 'value', e.target.value)}
+                      onChange={(e) => {
+                        applyControlledInputChange(e.target, v.value, e.target.value, (val) =>
+                          updateVar(i, 'value', val)
+                        )
+                      }}
                       sx={{ flex: 1.5 }}
                     />
                     <IconButton

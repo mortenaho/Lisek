@@ -115,8 +115,12 @@ Postman-compatible **`pm.*`** sandbox: environment/collection vars, `pm.test`, `
 
 ### History
 
-- Timeline chart of recent request durations
-- Reopen any past request/response snapshot
+- Reopen any past request/response snapshot from the History panel
+
+### Help & updates
+
+- In-app **Help** guide (`F1` or the ? button) covering the whole workspace
+- Optional notification when a newer GitHub release is available
 
 ### Import & Export
 
@@ -193,8 +197,8 @@ Live at **https://mortenaho.github.io/Lisek/**
 Push a version tag to trigger the Windows + Linux build workflow:
 
 ```bash
-git tag v1.6.1
-git push origin v1.6.1
+git tag v1.6.2
+git push origin v1.6.2
 ```
 
 Or run **Actions → Release → Run workflow** with the tag name.

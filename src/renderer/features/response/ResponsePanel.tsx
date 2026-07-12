@@ -47,6 +47,12 @@ import {
 import { diffText, prettyJson } from '../../utils/responseDiff'
 import { COMPACT, formatBytes } from '../../theme/compact'
 import { applyControlledInputChange } from '../../utils/inputSelection'
+import ResizeHandle, { clamp, readStoredSize, storeSize } from '../../components/ResizeHandle'
+
+const QUERY_PANEL_MIN = 120
+const QUERY_PANEL_MAX = 560
+const QUERY_PANEL_DEFAULT = 220
+const STORAGE_QUERY_PANEL = 'lisek:jsonpath-panel-height'
 
 export type ResponseBodyViewHandle = {
   openFind: () => void
@@ -55,8 +61,18 @@ export type ResponseBodyViewHandle = {
 const ResponseBodyView = memo(
   forwardRef<
     ResponseBodyViewHandle,
-    { body: string; contentType: string; responseKey: string }
-  >(function ResponseBodyView({ body, contentType, responseKey }, ref) {
+    {
+      body: string
+      contentType: string
+      responseKey: string
+      canJsonPath?: boolean
+      jsonPathOpen?: boolean
+      onToggleJsonPath?: () => void
+    }
+  >(function ResponseBodyView(
+    { body, contentType, responseKey, canJsonPath, jsonPathOpen, onToggleJsonPath },
+    ref
+  ) {
   const theme = useTheme()
   const containerRef = useRef<HTMLDivElement>(null)
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null)
@@ -147,6 +163,19 @@ const ResponseBodyView = memo(
             <ContentCopyIcon sx={COMPACT.icon} />
           </IconButton>
         </Tooltip>
+        {canJsonPath && onToggleJsonPath && (
+          <Tooltip title={jsonPathOpen ? 'Close JSONPath (Esc)' : 'JSONPath query (Ctrl+F)'}>
+            <IconButton
+              size="small"
+              color={jsonPathOpen ? 'primary' : 'default'}
+              onClick={onToggleJsonPath}
+              aria-label="JSONPath query"
+              sx={COMPACT.iconBtn}
+            >
+              <SearchIcon sx={COMPACT.icon} />
+            </IconButton>
+          </Tooltip>
+        )}
       </Box>
 
       <Box ref={containerRef} sx={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
@@ -278,8 +307,28 @@ const JsonQueryPanel = memo(function JsonQueryPanel({
   const [queryError, setQueryError] = useState<string | null>(null)
   const [helpOpen, setHelpOpen] = useState(false)
   const [envVarName, setEnvVarName] = useState('')
+  const [panelHeight, setPanelHeight] = useState(() =>
+    clamp(readStoredSize(STORAGE_QUERY_PANEL, QUERY_PANEL_DEFAULT), QUERY_PANEL_MIN, QUERY_PANEL_MAX)
+  )
+  const panelWrapRef = useRef<HTMLDivElement>(null)
+  const panelHeightRef = useRef(panelHeight)
+  panelHeightRef.current = panelHeight
   const environments = useAppStore((s) => s.environments)
   const loadEnvironments = useAppStore((s) => s.loadEnvironments)
+
+  const applyPanelHeight = useCallback((height: number) => {
+    if (panelWrapRef.current) panelWrapRef.current.style.height = `${height}px`
+  }, [])
+
+  const getPanelMax = useCallback(
+    () => Math.min(QUERY_PANEL_MAX, Math.floor(window.innerHeight * 0.55)),
+    []
+  )
+
+  const commitPanelHeight = useCallback((height: number) => {
+    setPanelHeight(height)
+    storeSize(STORAGE_QUERY_PANEL, height)
+  }, [])
 
   useEffect(() => {
     setJsonQuery('')
@@ -343,122 +392,172 @@ const JsonQueryPanel = memo(function JsonQueryPanel({
   if (!open) return null
 
   return (
-    <Box
-      sx={{
-        px: 0.75,
-        py: 0.25,
-        flexShrink: 0,
-        borderTop: 1,
-        borderColor: 'divider',
-        bgcolor: 'action.hover'
-      }}
-    >
-      <Box sx={{ display: 'flex', gap: 0.25, alignItems: 'center' }}>
-        <Tooltip title="JSONPath help">
-          <IconButton
-            size="small"
-            onClick={() => setHelpOpen(true)}
-            aria-label="JSONPath help"
-            sx={{ p: 0.25 }}
-          >
-            <HelpOutlineIcon sx={{ fontSize: 14 }} />
-          </IconButton>
-        </Tooltip>
-        <TextField
-          size="small"
-          fullWidth
-          inputRef={inputRef}
-          placeholder="JSONPath — e.g. $.data.items[0].name"
-          value={jsonQuery}
-          onChange={(e) =>
-            applyControlledInputChange(e.target, jsonQuery, e.target.value, setJsonQuery)
-          }
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') runQuery()
-            if (e.key === 'Escape') onClose()
-          }}
+    <Box sx={{ flexShrink: 0, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+      <ResizeHandle
+        axis="y"
+        min={QUERY_PANEL_MIN}
+        max={getPanelMax()}
+        getSize={() => panelHeightRef.current}
+        onLiveResize={applyPanelHeight}
+        onCommit={commitPanelHeight}
+      />
+      <Box
+        ref={panelWrapRef}
+        sx={{
+          height: panelHeight,
+          minHeight: QUERY_PANEL_MIN,
+          display: 'flex',
+          flexDirection: 'column',
+          px: 0.75,
+          pt: 0.5,
+          pb: 0.5,
+          bgcolor: 'action.hover',
+          borderTop: 1,
+          borderColor: 'primary.main',
+          overflow: 'hidden',
+          boxShadow: (t) => `0 -4px 12px ${t.palette.mode === 'dark' ? 'rgba(0,0,0,0.35)' : 'rgba(0,0,0,0.08)'}`
+        }}
+      >
+        <Typography
           sx={{
-            bgcolor: 'background.paper',
-            '& .MuiInputBase-root': { height: 24, py: 0 },
-            '& .MuiInputBase-input': { py: 0.25, px: 0.75 }
+            flexShrink: 0,
+            fontSize: 9,
+            color: 'text.secondary',
+            textAlign: 'center',
+            mb: 0.25,
+            letterSpacing: 0.4,
+            userSelect: 'none'
           }}
-          slotProps={{
-            input: { sx: { fontFamily: 'Consolas, monospace', fontSize: 11 } }
-          }}
-        />
-        <Tooltip title="Run query">
-          <span>
-            <IconButton
-              size="small"
-              onClick={runQuery}
-              disabled={!jsonQuery.trim()}
-              aria-label="Run JSONPath query"
-              sx={{ p: 0.25 }}
-            >
-              <SearchIcon sx={{ fontSize: 14 }} />
-            </IconButton>
-          </span>
-        </Tooltip>
-        <TextField
-          size="small"
-          placeholder="env var"
-          value={envVarName}
-          onChange={(e) => setEnvVarName(e.target.value)}
-          sx={{ width: 88, '& .MuiInputBase-root': { height: 24 }, '& .MuiInputBase-input': { py: 0.25, px: 0.5, fontSize: 11 } }}
-        />
-        <Tooltip title="Set active environment variable from JSONPath result">
-          <span>
-            <IconButton
-              size="small"
-              onClick={() => void setEnvFromQuery()}
-              disabled={!jsonQuery.trim() || !envVarName.trim()}
-              aria-label="Set environment variable"
-              sx={{ p: 0.25 }}
-            >
-              <BoltIcon sx={{ fontSize: 14 }} />
-            </IconButton>
-          </span>
-        </Tooltip>
-        <Tooltip title="Close (Esc)">
-          <IconButton size="small" onClick={onClose} aria-label="Close search" sx={{ p: 0.25 }}>
-            <CloseIcon sx={{ fontSize: 14 }} />
-          </IconButton>
-        </Tooltip>
-      </Box>
-      {queryError && (
-        <Typography variant="caption" color="error" sx={{ display: 'block', px: 0.5, lineHeight: 1.3 }}>
-          {queryError}
+        >
+          JSONPath — drag the bar above to enlarge
         </Typography>
-      )}
-      {queryResult !== null && !queryError && (
+        <Box sx={{ display: 'flex', gap: 0.25, alignItems: 'center', flexShrink: 0 }}>
+          <Tooltip title="Help — how to use JSONPath">
+            <Button
+              size="small"
+              startIcon={<HelpOutlineIcon sx={{ fontSize: '14px !important' }} />}
+              onClick={() => setHelpOpen(true)}
+              sx={{
+                textTransform: 'none',
+                minWidth: 0,
+                px: 0.75,
+                py: 0.25,
+                fontSize: 11,
+                fontWeight: 600,
+                flexShrink: 0
+              }}
+            >
+              Help
+            </Button>
+          </Tooltip>
+          <TextField
+            size="small"
+            fullWidth
+            inputRef={inputRef}
+            placeholder="JSONPath — e.g. $.data.items[0].name"
+            value={jsonQuery}
+            onChange={(e) =>
+              applyControlledInputChange(e.target, jsonQuery, e.target.value, setJsonQuery)
+            }
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') runQuery()
+              if (e.key === 'Escape') onClose()
+            }}
+            sx={{
+              bgcolor: 'background.paper',
+              '& .MuiInputBase-root': { height: 28, py: 0 },
+              '& .MuiInputBase-input': { py: 0.5, px: 0.75 }
+            }}
+            slotProps={{
+              input: { sx: { fontFamily: 'Consolas, monospace', fontSize: 11 } }
+            }}
+          />
+          <Tooltip title="Run query">
+            <span>
+              <IconButton
+                size="small"
+                onClick={runQuery}
+                disabled={!jsonQuery.trim()}
+                aria-label="Run JSONPath query"
+                sx={{ p: 0.25 }}
+              >
+                <SearchIcon sx={{ fontSize: 14 }} />
+              </IconButton>
+            </span>
+          </Tooltip>
+          <TextField
+            size="small"
+            placeholder="env var"
+            value={envVarName}
+            onChange={(e) => setEnvVarName(e.target.value)}
+            sx={{
+              width: 88,
+              '& .MuiInputBase-root': { height: 28 },
+              '& .MuiInputBase-input': { py: 0.5, px: 0.5, fontSize: 11 }
+            }}
+          />
+          <Tooltip title="Set active environment variable from JSONPath result">
+            <span>
+              <IconButton
+                size="small"
+                onClick={() => void setEnvFromQuery()}
+                disabled={!jsonQuery.trim() || !envVarName.trim()}
+                aria-label="Set environment variable"
+                sx={{ p: 0.25 }}
+              >
+                <BoltIcon sx={{ fontSize: 14 }} />
+              </IconButton>
+            </span>
+          </Tooltip>
+          <Tooltip title="Close (Esc)">
+            <IconButton size="small" onClick={onClose} aria-label="Close search" sx={{ p: 0.25 }}>
+              <CloseIcon sx={{ fontSize: 14 }} />
+            </IconButton>
+          </Tooltip>
+        </Box>
+        {queryError && (
+          <Typography
+            variant="caption"
+            color="error"
+            sx={{ display: 'block', px: 0.5, pt: 0.5, flexShrink: 0, lineHeight: 1.3 }}
+          >
+            {queryError}
+          </Typography>
+        )}
         <Box
           component="pre"
           sx={{
             m: 0,
-            mt: 0.25,
-            px: 0.75,
-            py: 0.25,
-            maxHeight: 72,
+            mt: 0.5,
+            flex: 1,
+            minHeight: 0,
             overflow: 'auto',
-            fontSize: 10,
-            lineHeight: 1.35,
+            px: 0.75,
+            py: 0.5,
+            fontSize: 11,
+            lineHeight: 1.4,
             fontFamily: 'Consolas, "Cascadia Code", "Courier New", monospace',
             whiteSpace: 'pre-wrap',
             wordBreak: 'break-word',
             bgcolor: 'background.paper',
             borderRadius: 0.5,
             border: 1,
-            borderColor: 'divider'
+            borderColor: 'divider',
+            color: queryResult !== null && !queryError ? 'text.primary' : 'text.disabled'
           }}
         >
-          {queryResult}
+          {queryError
+            ? ''
+            : queryResult !== null
+              ? queryResult
+              : 'Run a JSONPath query to see results here.\nDrag the top bar upward to enlarge this panel.'}
         </Box>
-      )}
-      <JsonPathHelpDialog
-        open={helpOpen}
-        onClose={() => setHelpOpen(false)}
-        onUseExample={useExample}
-      />
+        <JsonPathHelpDialog
+          open={helpOpen}
+          onClose={() => setHelpOpen(false)}
+          onUseExample={useExample}
+        />
+      </Box>
     </Box>
   )
 })
@@ -835,6 +934,9 @@ export default memo(function ResponsePanel() {
                 body={response.body}
                 contentType={contentType}
                 responseKey={responseKey}
+                canJsonPath={bodyView?.data != null}
+                jsonPathOpen={queryPanelOpen}
+                onToggleJsonPath={() => setQueryPanelOpen((open) => !open)}
               />
             </Box>
             {bodyView?.data != null && (

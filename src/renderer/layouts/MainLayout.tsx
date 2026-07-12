@@ -7,6 +7,7 @@ import {
   Tooltip
 } from '@mui/material'
 import SettingsIcon from '@mui/icons-material/Settings'
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline'
 import Brightness4Icon from '@mui/icons-material/Brightness4'
 import Brightness7Icon from '@mui/icons-material/Brightness7'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
@@ -18,7 +19,6 @@ import ProtoPanel from '../features/grpc/ProtoPanel'
 import PluginsPanel from '../features/plugins/PluginsPanel'
 import EnvironmentsDialog from '../features/environments/EnvironmentsDialog'
 import RequestBuilder from '../features/request/RequestBuilder'
-import ResponsePanel from '../features/response/ResponsePanel'
 import ImportDialog from '../features/import/ImportDialog'
 import CurlSnippetDialog from '../features/snippets/CurlSnippetDialog'
 import SettingsDialog from '../features/settings/SettingsDialog'
@@ -27,6 +27,7 @@ import CommandPalette from '../features/search/CommandPalette'
 import MockServerDialog from '../features/settings/MockServerDialog'
 import CookiesDialog from '../features/settings/CookiesDialog'
 import AboutDialog from '../features/about/AboutDialog'
+import HelpDialog from '../features/help/HelpDialog'
 import ResizeHandle, { clamp, readStoredSize, storeSize } from '../components/ResizeHandle'
 import SidebarPanelHeader from '../components/SidebarPanelHeader'
 import IconRail from './IconRail'
@@ -36,15 +37,10 @@ import { APP_LOGO } from '../utils/assets'
 const SIDEBAR_MIN = 220
 const SIDEBAR_MAX = 420
 const SIDEBAR_DEFAULT = 280
-const RESPONSE_MIN = 280
-const RESPONSE_MAX = 720
-const RESPONSE_DEFAULT = 400
 
 const STORAGE_SIDEBAR = 'lisek:sidebar-width'
-const STORAGE_RESPONSE = 'lisek:response-width'
 
 const MemoRequestBuilder = memo(RequestBuilder)
-const MemoResponsePanel = memo(ResponsePanel)
 
 export default function MainLayout() {
   const activeSidebar = useAppStore((s) => s.activeSidebar)
@@ -60,6 +56,7 @@ export default function MainLayout() {
   const activeEnvName = useAppStore((s) => s.environments.find((e) => e.isActive)?.name ?? null)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [aboutOpen, setAboutOpen] = useState(false)
+  const [helpOpen, setHelpOpen] = useState(false)
   const [envDialogOpen, setEnvDialogOpen] = useState(false)
   const [cookiesOpen, setCookiesOpen] = useState(false)
   const [mockOpen, setMockOpen] = useState(false)
@@ -69,9 +66,6 @@ export default function MainLayout() {
   const [sidebarWidth, setSidebarWidth] = useState(() =>
     clamp(readStoredSize(STORAGE_SIDEBAR, SIDEBAR_DEFAULT), SIDEBAR_MIN, SIDEBAR_MAX)
   )
-  const [responseWidth, setResponseWidth] = useState(() =>
-    clamp(readStoredSize(STORAGE_RESPONSE, RESPONSE_DEFAULT), RESPONSE_MIN, RESPONSE_MAX)
-  )
 
   useEffect(() => {
     void refreshMockServerState()
@@ -80,33 +74,16 @@ export default function MainLayout() {
   }, [refreshMockServerState])
 
   const sidebarWrapRef = useRef<HTMLDivElement>(null)
-  const responseWrapRef = useRef<HTMLDivElement>(null)
   const sidebarWidthRef = useRef(sidebarWidth)
-  const responseWidthRef = useRef(responseWidth)
   sidebarWidthRef.current = sidebarWidth
-  responseWidthRef.current = responseWidth
 
   const applySidebarWidth = useCallback((width: number) => {
     if (sidebarWrapRef.current) sidebarWrapRef.current.style.width = `${width}px`
   }, [])
 
-  const applyResponseWidth = useCallback((width: number) => {
-    if (responseWrapRef.current) responseWrapRef.current.style.width = `${width}px`
-  }, [])
-
-  const getResponseMax = useCallback(
-    () => Math.min(RESPONSE_MAX, Math.floor(window.innerWidth * 0.55)),
-    []
-  )
-
   const commitSidebarWidth = useCallback((width: number) => {
     setSidebarWidth(width)
     storeSize(STORAGE_SIDEBAR, width)
-  }, [])
-
-  const commitResponseWidth = useCallback((width: number) => {
-    setResponseWidth(width)
-    storeSize(STORAGE_RESPONSE, width)
   }, [])
 
   useEffect(() => {
@@ -126,6 +103,11 @@ export default function MainLayout() {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'w' && !typing) {
         e.preventDefault()
         closeActiveTab()
+      }
+
+      if (e.key === 'F1') {
+        e.preventDefault()
+        setHelpOpen(true)
       }
     }
     window.addEventListener('keydown', onKeyDown)
@@ -158,6 +140,16 @@ export default function MainLayout() {
 
           <Box sx={{ flexGrow: 1 }} />
 
+          <Tooltip title="Help (F1)">
+            <IconButton
+              color="inherit"
+              size="small"
+              sx={{ color: 'rgba(255,255,255,0.9)', '&:hover': { bgcolor: 'rgba(255,255,255,0.12)' } }}
+              onClick={() => setHelpOpen(true)}
+            >
+              <HelpOutlineIcon />
+            </IconButton>
+          </Tooltip>
           <Tooltip title="Toggle theme">
             <IconButton
               color="inherit"
@@ -244,50 +236,13 @@ export default function MainLayout() {
           sx={{
             flex: 1,
             display: 'flex',
+            flexDirection: 'column',
             minWidth: 0,
             overflow: 'hidden',
             bgcolor: 'background.default'
           }}
         >
-          <Box
-            sx={{
-              flex: 1,
-              overflow: 'auto',
-              minWidth: 0,
-              minHeight: 0,
-              contain: 'layout style',
-              borderRight: 1,
-              borderColor: 'divider'
-            }}
-            data-resize-panel
-          >
-            <MemoRequestBuilder />
-          </Box>
-
-          <ResizeHandle
-            axis="x"
-            min={RESPONSE_MIN}
-            max={getResponseMax()}
-            getSize={() => responseWidthRef.current}
-            onLiveResize={applyResponseWidth}
-            onCommit={commitResponseWidth}
-            invert
-          />
-
-          <Box
-            ref={responseWrapRef}
-            data-resize-panel
-            sx={{
-              width: responseWidth,
-              minWidth: RESPONSE_MIN,
-              flexShrink: 0,
-              overflow: 'hidden',
-              bgcolor: 'background.paper',
-              contain: 'layout style'
-            }}
-          >
-            <MemoResponsePanel />
-          </Box>
+          <MemoRequestBuilder />
         </Box>
       </Box>
 
@@ -301,8 +256,14 @@ export default function MainLayout() {
         onClose={() => setSettingsOpen(false)}
         onShowAbout={() => setAboutOpen(true)}
         onShowShortcuts={() => setShortcutsOpen(true)}
+        onShowHelp={() => setHelpOpen(true)}
       />
       <ShortcutsDialog open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
+      <HelpDialog
+        open={helpOpen}
+        onClose={() => setHelpOpen(false)}
+        onShowShortcuts={() => setShortcutsOpen(true)}
+      />
       <CommandPalette />
       <AboutDialog open={aboutOpen} onClose={() => setAboutOpen(false)} />
     </Box>

@@ -46,6 +46,7 @@ interface AppState {
   snippetOpen: boolean
   importDialogOpen: boolean
   importType: 'postman' | 'openapi' | 'insomnia' | 'curl' | null
+  importTargetCollectionId: string | null
   curlPaste: string
   searchQuery: string
   commandPaletteOpen: boolean
@@ -63,6 +64,7 @@ interface AppState {
   switchTab: (tabId: string) => Promise<void>
   closeTab: (tabId: string) => void
   closeActiveTab: () => void
+  closeAllTabs: () => void
   setCommandPaletteOpen: (open: boolean) => void
   setShortcutsOpen: (open: boolean) => void
   loadCollections: () => Promise<void>
@@ -82,7 +84,7 @@ interface AppState {
   setRequestPinned: (id: string, pinned: boolean) => Promise<void>
   setResponse: (response: HttpResponse | null, testResults?: TestResult[], scriptLogs?: string[]) => void
   setSnippetOpen: (open: boolean) => void
-  setImportDialog: (open: boolean, type?: AppState['importType']) => void
+  setImportDialog: (open: boolean, type?: AppState['importType'], collectionId?: string | null) => void
   setCurlPaste: (text: string) => void
   setSearchQuery: (q: string) => void
   refreshMockServerState: () => Promise<void>
@@ -165,6 +167,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   snippetOpen: false,
   importDialogOpen: false,
   importType: null,
+  importTargetCollectionId: null,
   curlPaste: '',
   searchQuery: '',
   commandPaletteOpen: false,
@@ -327,6 +330,17 @@ export const useAppStore = create<AppState>((set, get) => ({
   closeActiveTab: () => {
     const { activeTabId } = get()
     if (activeTabId) get().closeTab(activeTabId)
+  },
+
+  closeAllTabs: () => {
+    set({
+      requestTabs: [],
+      activeTabId: null,
+      activeRequest: null,
+      response: null,
+      testResults: [],
+      scriptLogs: []
+    })
   },
 
   openHistoryItem: (item) => {
@@ -597,7 +611,13 @@ export const useAppStore = create<AppState>((set, get) => ({
   setResponse: (response, testResults = [], scriptLogs = []) =>
     set({ response, testResults, scriptLogs }),
   setSnippetOpen: (open) => set({ snippetOpen: open }),
-  setImportDialog: (open, type = null) => set({ importDialogOpen: open, importType: type }),
+  setImportDialog: (open, type = null, collectionId = null) =>
+    set({
+      importDialogOpen: open,
+      importType: type,
+      importTargetCollectionId: open ? collectionId : null,
+      ...(open ? {} : { curlPaste: '' })
+    }),
   setCurlPaste: (text) => set({ curlPaste: text }),
   setSearchQuery: (q) => set({ searchQuery: q }),
 

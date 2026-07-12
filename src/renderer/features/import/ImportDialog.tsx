@@ -46,6 +46,8 @@ const FORMAT_META: Record<
 export default function ImportDialog() {
   const open = useAppStore((s) => s.importDialogOpen)
   const importType = useAppStore((s) => s.importType)
+  const importTargetCollectionId = useAppStore((s) => s.importTargetCollectionId)
+  const collections = useAppStore((s) => s.collections)
   const setImportDialog = useAppStore((s) => s.setImportDialog)
   const curlPaste = useAppStore((s) => s.curlPaste)
   const setCurlPaste = useAppStore((s) => s.setCurlPaste)
@@ -58,6 +60,10 @@ export default function ImportDialog() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const targetCollectionName = importTargetCollectionId
+    ? collections.find((c) => c.id === importTargetCollectionId)?.name
+    : null
+
   const handleClose = () => {
     setImportDialog(false)
     setImportUrl('')
@@ -66,7 +72,7 @@ export default function ImportDialog() {
   }
 
   const handleBack = () => {
-    setImportDialog(true, null)
+    setImportDialog(true, null, importTargetCollectionId)
     setImportUrl('')
     setError(null)
     setLoading(false)
@@ -126,9 +132,10 @@ export default function ImportDialog() {
     setLoading(true)
     setError(null)
     try {
-      const req = await window.lisek.import.curl(curlPaste)
-      await selectRequest(req)
+      const req = await window.lisek.import.curl(curlPaste, importTargetCollectionId ?? undefined)
+      await loadCollections()
       await loadRequests()
+      await selectRequest(req)
       handleClose()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Import failed')
@@ -140,8 +147,15 @@ export default function ImportDialog() {
   if (importType === 'curl') {
     return (
       <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
-        <DialogTitle>Import cURL</DialogTitle>
+        <DialogTitle>
+          {targetCollectionName ? `Import cURL into “${targetCollectionName}”` : 'Import cURL'}
+        </DialogTitle>
         <DialogContent>
+          {targetCollectionName && (
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+              The request will be added to this collection.
+            </Typography>
+          )}
           {error && (
             <Alert severity="error" sx={{ mb: 1 }}>
               {error}
@@ -158,9 +172,11 @@ export default function ImportDialog() {
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleBack} startIcon={<ArrowBackIcon />} disabled={loading}>
-            Back
-          </Button>
+          {!importTargetCollectionId && (
+            <Button onClick={handleBack} startIcon={<ArrowBackIcon />} disabled={loading}>
+              Back
+            </Button>
+          )}
           <Button onClick={handleClose} disabled={loading}>
             Cancel
           </Button>

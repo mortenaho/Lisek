@@ -20,25 +20,44 @@ interface Props {
   onClose: () => void
   onShowAbout?: () => void
   onShowShortcuts?: () => void
+  onShowHelp?: () => void
 }
 
-export default function SettingsDialog({ open, onClose, onShowAbout, onShowShortcuts }: Props) {
+export default function SettingsDialog({ open, onClose, onShowAbout, onShowShortcuts, onShowHelp }: Props) {
   const setThemeMode = useAppStore((s) => s.setThemeMode)
   const loadInitial = useAppStore((s) => s.loadInitial)
   const [settings, setSettings] = useState<Settings>({
     sslVerify: true,
     timeoutMs: 30000,
     followRedirects: true,
-    theme: 'light'
+    theme: 'light',
+    autoUpdate: true
   })
   const [backupStatus, setBackupStatus] = useState<string | null>(null)
+  const [updateStatus, setUpdateStatus] = useState<string | null>(null)
 
   useEffect(() => {
     if (open) {
       window.lisek.settings.get().then(setSettings)
       setBackupStatus(null)
+      setUpdateStatus(null)
     }
   }, [open])
+
+  const checkForUpdate = async () => {
+    setUpdateStatus('Checking…')
+    const result = await window.lisek.app.checkForUpdate()
+    if (result.error) {
+      setUpdateStatus(`Could not check: ${result.error}`)
+      return
+    }
+    if (result.updateAvailable && result.latestVersion) {
+      setUpdateStatus(`New version available: v${result.latestVersion}`)
+      if (result.releaseUrl) void window.lisek.shell.openExternal(result.releaseUrl)
+      return
+    }
+    setUpdateStatus(`You're up to date (v${result.currentVersion})`)
+  }
 
   const save = async () => {
     await window.lisek.settings.set(settings)
@@ -130,6 +149,25 @@ export default function SettingsDialog({ open, onClose, onShowAbout, onShowShort
             }
             label="Dark Theme"
           />
+          <FormControlLabel
+            control={
+              <Switch
+                checked={settings.autoUpdate !== false}
+                onChange={(e) => setSettings({ ...settings, autoUpdate: e.target.checked })}
+              />
+            }
+            label="Notify when a new version is available"
+          />
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+            <Button size="small" variant="outlined" onClick={() => void checkForUpdate()}>
+              Check for updates
+            </Button>
+            {updateStatus && (
+              <Typography variant="caption" color="text.secondary">
+                {updateStatus}
+              </Typography>
+            )}
+          </Box>
 
           <Divider />
 
@@ -151,6 +189,15 @@ export default function SettingsDialog({ open, onClose, onShowAbout, onShowShort
       </DialogContent>
       <DialogActions sx={{ justifyContent: 'space-between', px: 3, pb: 2 }}>
         <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button
+            size="small"
+            onClick={() => {
+              onClose()
+              onShowHelp?.()
+            }}
+          >
+            Help
+          </Button>
           <Button
             size="small"
             onClick={() => {

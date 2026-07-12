@@ -40,7 +40,10 @@ export function RequestEditorProvider({
   )
 
   useEffect(() => {
-    if (storeRequest) setDraft(storeRequest)
+    if (!storeRequest) return
+    // Only adopt store updates when switching requests — not on every
+    // activeRequest identity change (e.g. after send), which resets carets.
+    setDraft((prev) => (prev.id === storeRequest.id ? prev : storeRequest))
   }, [storeRequest])
 
   const flush = useCallback(() => {

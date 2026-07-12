@@ -58,6 +58,9 @@ function CodeEditor({
   return (
     <Box
       sx={{
+        height: height === '100%' ? '100%' : undefined,
+        minHeight: height === '100%' ? 0 : undefined,
+        flex: height === '100%' ? 1 : undefined,
         border: 1,
         borderColor: 'divider',
         borderRadius: 1,

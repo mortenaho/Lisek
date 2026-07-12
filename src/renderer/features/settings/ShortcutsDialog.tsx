@@ -16,7 +16,10 @@ const SHORTCUTS = [
   { keys: 'Ctrl+Enter', action: 'Send request' },
   { keys: 'Enter', action: 'Send request (when URL field is focused)' },
   { keys: 'Ctrl+W', action: 'Close active tab' },
-  { keys: 'Esc', action: 'Close dialogs / JSONPath panel' }
+  { keys: 'Middle-click', action: 'Close tab' },
+  { keys: 'Close all', action: 'Close all open tabs (tab bar button)' },
+  { keys: 'Esc', action: 'Close dialogs / JSONPath panel' },
+  { keys: 'F1', action: 'Open Help' }
 ]
 
 interface Props {

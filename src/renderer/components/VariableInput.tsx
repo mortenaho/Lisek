@@ -366,10 +366,22 @@ function VariableInput({
           value={text}
           placeholder=""
           onChange={(e) => {
-            const next = e.target.value
+            const input = e.target
+            const start = input.selectionStart
+            const end = input.selectionEnd
+            const next = input.value
             setText(next)
             onChange(next)
-            requestAnimationFrame(refreshAutocomplete)
+            requestAnimationFrame(() => {
+              try {
+                if (start != null && end != null) {
+                  input.setSelectionRange(start, end)
+                }
+              } catch {
+                /* unmounted */
+              }
+              refreshAutocomplete()
+            })
           }}
           onFocus={() => {
             focusedRef.current = true

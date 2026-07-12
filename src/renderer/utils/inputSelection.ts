@@ -1,22 +1,31 @@
 /** Preserve caret/selection after a controlled input value update. */
 export function applyControlledInputChange(
   input: HTMLInputElement | HTMLTextAreaElement,
-  previousValue: string,
+  _previousValue: string,
   nextValue: string,
   onChange: (value: string) => void
 ) {
-  const start = input.selectionStart ?? nextValue.length
-  const end = input.selectionEnd ?? start
+  // By the time the browser fires `onChange`, it has already applied the edit
+  // and moved the caret. Capture that selection, then restore it after React
+  // re-renders the controlled value (which otherwise jumps the caret).
+  const start = input.selectionStart
+  const end = input.selectionEnd
+
   onChange(nextValue)
 
-  const inserted = nextValue.length - previousValue.length + (end - start)
-  const pos = Math.max(0, Math.min(start + inserted, nextValue.length))
-
-  requestAnimationFrame(() => {
+  const restore = () => {
     try {
-      input.setSelectionRange(pos, pos)
+      if (start == null || end == null) return
+      const max = nextValue.length
+      input.setSelectionRange(Math.min(start, max), Math.min(end, max))
     } catch {
-      /* input unmounted */
+      /* input unmounted or not focused */
     }
-  })
+  }
+
+  if (typeof requestAnimationFrame === 'function') {
+    requestAnimationFrame(restore)
+  } else {
+    setTimeout(restore, 0)
+  }
 }

@@ -317,6 +317,16 @@ export interface AppInfo {
   website: string
 }
 
+export interface UpdateCheckResult {
+  updateAvailable: boolean
+  currentVersion: string
+  latestVersion: string | null
+  releaseUrl: string | null
+  releaseNotes: string | null
+  checkedAt: number
+  error?: string
+}
+
 export interface LisekAPI {
   request: {
     send: (payload: HttpRequestPayload) => Promise<SendResult>
@@ -474,6 +484,8 @@ export interface LisekAPI {
   }
   app: {
     getInfo: () => Promise<AppInfo>
+    checkForUpdate: () => Promise<UpdateCheckResult>
+    onUpdateAvailable: (callback: (result: UpdateCheckResult) => void) => () => void
   }
   shell: {
     openExternal: (url: string) => Promise<void>

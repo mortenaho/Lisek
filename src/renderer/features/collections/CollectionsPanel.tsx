@@ -14,6 +14,7 @@ import {
   Tooltip,
   Divider
 } from '@mui/material'
+import CodeIcon from '@mui/icons-material/Code'
 import AddIcon from '@mui/icons-material/Add'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import CreateNewFolderIcon from '@mui/icons-material/CreateNewFolder'
@@ -726,6 +727,19 @@ export default function CollectionsPanel() {
                 <AddIcon fontSize="small" />
               </ListItemIcon>
               New Request in folder
+            </MenuItem>
+            <MenuItem
+              onClick={() => {
+                const collectionId = menuAnchor.target.item.id
+                setMenuAnchor(null)
+                setExpanded((e) => ({ ...e, [collectionId]: true }))
+                setImportDialog(true, 'curl', collectionId)
+              }}
+            >
+              <ListItemIcon>
+                <CodeIcon fontSize="small" />
+              </ListItemIcon>
+              Import cURL
             </MenuItem>
             <MenuItem
               onClick={() => {

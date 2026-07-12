@@ -23,15 +23,32 @@ interface Props {
 
 export default function AboutDialog({ open, onClose }: Props) {
   const [info, setInfo] = useState<AppInfo | null>(null)
+  const [updateStatus, setUpdateStatus] = useState<string | null>(null)
 
   useEffect(() => {
     if (open) {
       window.lisek.app.getInfo().then(setInfo)
+      setUpdateStatus(null)
     }
   }, [open])
 
   const openLink = (url: string) => {
     void window.lisek.shell.openExternal(url)
+  }
+
+  const checkForUpdate = async () => {
+    setUpdateStatus('Checking…')
+    const result = await window.lisek.app.checkForUpdate()
+    if (result.error) {
+      setUpdateStatus(`Could not check: ${result.error}`)
+      return
+    }
+    if (result.updateAvailable && result.latestVersion) {
+      setUpdateStatus(`New version available: v${result.latestVersion}`)
+      if (result.releaseUrl) openLink(result.releaseUrl)
+      return
+    }
+    setUpdateStatus(`You're up to date (v${result.currentVersion})`)
   }
 
   return (
@@ -95,10 +112,20 @@ export default function AboutDialog({ open, onClose }: Props) {
           </Box>
         </Box>
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button variant="contained" onClick={onClose} fullWidth>
-          Close
-        </Button>
+      <DialogActions sx={{ px: 3, pb: 2, flexDirection: 'column', gap: 1 }}>
+        {updateStatus && (
+          <Typography variant="caption" color="text.secondary" textAlign="center" sx={{ width: '100%' }}>
+            {updateStatus}
+          </Typography>
+        )}
+        <Box sx={{ display: 'flex', gap: 1, width: '100%' }}>
+          <Button variant="outlined" onClick={() => void checkForUpdate()} fullWidth>
+            Check for updates
+          </Button>
+          <Button variant="contained" onClick={onClose} fullWidth>
+            Close
+          </Button>
+        </Box>
       </DialogActions>
     </Dialog>
   )
