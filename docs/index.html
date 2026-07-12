@@ -43,7 +43,7 @@
           <span class="badge">Linux</span>
           <span class="badge">Offline-first</span>
           <span class="badge">MIT License</span>
-          <span class="badge">v1.6.2</span>
+          <span class="badge">v1.6.3</span>
         </div>
         <div class="actions">
           <a class="btn btn-primary" href="https://github.com/mortenaho/Lisek/releases/latest/download/Lisek-Setup.exe">Download for Windows</a>
@@ -150,16 +150,10 @@
 
     <section id="whats-new" class="features-section">
       <div class="container">
-        <h2 class="section-title">What&rsquo;s new in v1.6.2</h2>
+        <h2 class="section-title">What&rsquo;s new in v1.6.3</h2>
         <ul class="changelog-list">
-          <li><strong>App Help</strong> — full workspace guide via <code>F1</code> or the ? button in the title bar</li>
-          <li><strong>Update notifications</strong> — optional alert when a newer GitHub release is available</li>
-          <li><strong>Side-by-side workspace</strong> — address bar on top; request and response panes side by side</li>
-          <li><strong>JSONPath panel</strong> — resizable result area, Help button, and save query results to environment variables</li>
-          <li><strong>Import cURL into a collection</strong> — right-click a collection and paste a curl command</li>
-          <li><strong>Tabs</strong> — middle-click to close; Close all button</li>
-          <li><strong>Editor fixes</strong> — caret no longer jumps while typing in URL, tags, and variable fields</li>
-          <li><strong>Teal theme</strong> — refreshed primary accent color</li>
+          <li><strong>RPM package</strong> — installable <code>.rpm</code> for Fedora, RHEL, and compatible distros (<code>sudo dnf install ./Lisek.rpm</code>)</li>
+          <li>Includes everything from <strong>v1.6.2</strong>: app Help, update notifications, side-by-side workspace, JSONPath panel, cURL import into collections, and editor fixes</li>
         </ul>
       </div>
     </section>
@@ -182,9 +176,10 @@
             </article>
             <article class="download-platform">
               <h3>Linux</h3>
-              <p>AppImage (run directly) or tar.gz archive for Linux x64.</p>
+              <p>AppImage, RPM (Fedora/RHEL), or tar.gz for Linux x64.</p>
               <div class="actions">
                 <a class="btn btn-primary" href="https://github.com/mortenaho/Lisek/releases/latest/download/Lisek.AppImage">Lisek.AppImage</a>
+                <a class="btn btn-secondary" href="https://github.com/mortenaho/Lisek/releases/latest/download/Lisek.rpm">Lisek.rpm</a>
                 <a class="btn btn-secondary" href="https://github.com/mortenaho/Lisek/releases/latest/download/Lisek-linux.tar.gz">Lisek-linux.tar.gz</a>
               </div>
             </article>
@@ -197,7 +192,8 @@
             If Windows shows <strong>&ldquo;Windows protected your PC&rdquo;</strong>, click
             <strong>More info</strong>, then <strong>Run anyway</strong>.
             Lisek is open source and not code-signed yet.
-            On Linux, make the AppImage executable: <code>chmod +x Lisek.AppImage</code>
+            On Linux, make the AppImage executable: <code>chmod +x Lisek.AppImage</code>.
+            For RPM: <code>sudo dnf install ./Lisek.rpm</code> (or <code>sudo rpm -i Lisek.rpm</code>).
           </p>
           <p class="download-url">
             Latest release:
@@ -226,7 +222,7 @@
 
   <footer class="site-footer">
     <div class="container footer-row">
-      <span>MIT License · Lisek v1.6.2</span>
+      <span>MIT License · Lisek v1.6.3</span>
       <span>
         Built by
         <a href="https://mortenaho.ir">Seyed Morteza Hosseini</a>
