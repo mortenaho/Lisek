@@ -4,7 +4,9 @@
   "description": "Offline API client for HTTP, GraphQL, WebSocket, and gRPC",
   "main": "./out/main/index.js",
   "author": "Seyed Morteza Hosseini <mortenaho@gmail.com> (https://mortenaho.ir)",
+  "homepage": "https://mortenaho.github.io/Lisek",
   "license": "MIT",
+  "desktopName": "com.lisek.app.desktop",
   "scripts": {
     "dev": "node scripts/brand-electron.mjs && electron-vite dev",
     "build": "electron-vite build",
@@ -99,7 +101,13 @@
         "rpm"
       ],
       "category": "Development",
-      "icon": "resources/lisek-logo.png"
+      "icon": "resources/lisek-logo.png",
+      "desktop": {
+        "Name": "Lisek",
+        "Comment": "Offline API client for HTTP, GraphQL, WebSocket, and gRPC",
+        "Categories": "Development;Network;",
+        "StartupWMClass": "Lisek"
+      }
     },
     "rpm": {
       "packageCategory": "Development"
