@@ -26,11 +26,15 @@ flatpak install -y --user flathub org.flatpak.Builder \
   org.electronjs.Electron2.BaseApp//25.08
 
 cd flatpak
-flatpak run --command=flathub-build org.flatpak.Builder --install com.lisek.app.yml
+flatpak run --command=flatpak-builder org.flatpak.Builder \
+  --force-clean --user --install-deps-from=flathub --repo=repo builddir com.lisek.app.yml
+# extra-data apps: install from the local repo created by the build
+flatpak install --user -y ./repo com.lisek.app
 flatpak run com.lisek.app
 
 # Lint
 flatpak run --command=flatpak-builder-lint org.flatpak.Builder manifest com.lisek.app.yml
+flatpak run --command=flatpak-builder-lint org.flatpak.Builder repo repo
 ```
 
 ## Submit to Flathub

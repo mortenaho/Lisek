@@ -9,12 +9,14 @@ base-version: '25.08'
 command: lisek
 separate-locales: false
 finish-args:
+  # Network for API requests, local mock server, and update checks
   - --share=network
+  # GUI
   - --share=ipc
   - --socket=wayland
   - --socket=fallback-x11
   - --device=dri
-  - --filesystem=home
+  # File import/export uses xdg-desktop-portal (no blanket home access)
   - --env=XCURSOR_PATH=/run/host/user-share/icons:/run/host/share/icons
   - --env=ELECTRON_OZONE_PLATFORM_HINT=auto
 
@@ -31,7 +33,7 @@ modules:
       - type: script
         dest-filename: lisek.sh
         commands:
-          - exec zypak-wrapper.sh /app/extra/lisek/lisek --ozone-platform-hint=auto --enable-features=WaylandWindowDecorations "$@"
+          - exec zypak-wrapper.sh /app/extra/lisek/lisek "$@"
 
       - type: file
         path: apply_extra.sh

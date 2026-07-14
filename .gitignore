@@ -50,3 +50,9 @@ win-unpacked/
 mac-unpacked/
 linux-unpacked/
 squashfs-root/
+
+# Flatpak local build artifacts
+flatpak/builddir/
+flatpak/repo/
+flatpak/.flatpak-builder/
+flatpak/.ccache/
