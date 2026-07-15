@@ -34,28 +34,6 @@
     </ul>
   </description>
   <launchable type="desktop-id">com.lisek.app.desktop</launchable>
-  <screenshots>
-    <screenshot type="default">
-      <image>https://mortenaho.github.io/Lisek/screenshots/02-http-rest.png</image>
-      <caption>HTTP request editor and response panel</caption>
-    </screenshot>
-    <screenshot>
-      <image>https://mortenaho.github.io/Lisek/screenshots/01-collections.png</image>
-      <caption>Collections sidebar</caption>
-    </screenshot>
-    <screenshot>
-      <image>https://mortenaho.github.io/Lisek/screenshots/03-graphql.png</image>
-      <caption>GraphQL editor</caption>
-    </screenshot>
-    <screenshot>
-      <image>https://mortenaho.github.io/Lisek/screenshots/05-grpc.png</image>
-      <caption>gRPC client</caption>
-    </screenshot>
-    <screenshot>
-      <image>https://mortenaho.github.io/Lisek/screenshots/06-environments.png</image>
-      <caption>Environment variables</caption>
-    </screenshot>
-  </screenshots>
   <releases>
     <release version="1.6.4" date="2026-07-14">
       <description>

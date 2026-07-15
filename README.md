@@ -6,27 +6,9 @@ Offline desktop API client for **HTTP**, **GraphQL**, **WebSocket**, **SSE**, an
 
 **Download:** [Windows installer](https://github.com/mortenaho/Lisek/releases/latest/download/Lisek-Setup.exe) · [Linux AppImage](https://github.com/mortenaho/Lisek/releases/latest/download/Lisek.AppImage) · [Linux RPM](https://github.com/mortenaho/Lisek/releases/latest/download/Lisek.rpm) · [All releases](https://github.com/mortenaho/Lisek/releases/latest)
 
-![Lisek tour](docs/screenshots/lisek-tour.gif)
-
-## Screenshots
-
-| Collections | HTTP / REST |
-|-------------|-------------|
-| ![Collections](docs/screenshots/01-collections.png) | ![HTTP](docs/screenshots/02-http-rest.png) |
-
-| GraphQL | WebSocket |
-|---------|-----------|
-| ![GraphQL](docs/screenshots/03-graphql.png) | ![WebSocket](docs/screenshots/04-websocket.png) |
-
-| gRPC | Environments |
-|------|--------------|
-| ![gRPC](docs/screenshots/05-grpc.png) | ![Environments](docs/screenshots/06-environments.png) |
-
-| Scripts | History |
-|---------|---------|
-| ![Scripts](docs/screenshots/07-scripts.png) | ![History](docs/screenshots/08-history.png) |
-
----
+<p align="center">
+  <img src="docs/assets/logo.png" alt="Lisek" width="160" height="160">
+</p>
 
 ## Features
 
@@ -166,7 +148,6 @@ npm run dev
 npm run build      # production build
 npm run typecheck  # TypeScript check
 npm test           # Vitest unit tests
-npm run screenshots  # regenerate docs screenshots
 npm run icons      # regenerate app icons
 ```
 
@@ -230,7 +211,7 @@ src/
     features/     collections, request, response, mock server, plugins, …
     stores/       Zustand app state
 shared/           Shared TypeScript types
-docs/             GitHub Pages site & screenshots
+docs/             GitHub Pages marketing site
 tests/            Vitest unit tests
 ```
 
