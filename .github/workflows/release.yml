@@ -79,20 +79,22 @@ jobs:
       - name: Install Linux packaging tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y rpm
+          sudo apt-get install -y rpm fakeroot dpkg
 
-      - name: Build Linux AppImage, tar.gz, and RPM
-        run: npm run build && npx electron-builder --linux AppImage tar.gz rpm -p never
+      - name: Build Linux AppImage, tar.gz, RPM, and DEB
+        run: npm run build && npx electron-builder --linux AppImage tar.gz rpm deb -p never
 
       - name: Prepare stable download filenames
         run: |
           appimage=$(ls dist-installer/*.AppImage | head -1)
           tarball=$(ls dist-installer/*.tar.gz | head -1)
           rpmfile=$(ls dist-installer/*.rpm | head -1)
+          debfile=$(ls dist-installer/*.deb | head -1)
           cp "$appimage" dist-installer/Lisek.AppImage
           cp "$tarball" dist-installer/Lisek-linux.tar.gz
           cp "$rpmfile" dist-installer/Lisek.rpm
-          ls -lh dist-installer/Lisek.AppImage dist-installer/Lisek-linux.tar.gz dist-installer/Lisek.rpm
+          cp "$debfile" dist-installer/Lisek.deb
+          ls -lh dist-installer/Lisek.AppImage dist-installer/Lisek-linux.tar.gz dist-installer/Lisek.rpm dist-installer/Lisek.deb
 
       - name: Create GitHub Release (if needed)
         env:
@@ -106,4 +108,4 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
-        run: gh release upload "$RELEASE_TAG" dist-installer/Lisek.AppImage dist-installer/Lisek-linux.tar.gz dist-installer/Lisek.rpm --clobber
+        run: gh release upload "$RELEASE_TAG" dist-installer/Lisek.AppImage dist-installer/Lisek-linux.tar.gz dist-installer/Lisek.rpm dist-installer/Lisek.deb --clobber

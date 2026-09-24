@@ -98,7 +98,8 @@
       "target": [
         "AppImage",
         "tar.gz",
-        "rpm"
+        "rpm",
+        "deb"
       ],
       "category": "Development",
       "icon": "resources/lisek-logo.png",
@@ -108,6 +109,9 @@
         "Categories": "Development;Network;",
         "StartupWMClass": "Lisek"
       }
+    },
+    "deb": {
+      "packageCategory": "devel"
     },
     "rpm": {
       "packageCategory": "Development"

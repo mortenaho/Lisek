@@ -4,7 +4,7 @@ Offline desktop API client for **HTTP**, **GraphQL**, **WebSocket**, **SSE**, an
 
 **Website:** [mortenaho.github.io/Lisek](https://mortenaho.github.io/Lisek)
 
-**Download:** [Windows installer](https://github.com/mortenaho/Lisek/releases/latest/download/Lisek-Setup.exe) · [Linux AppImage](https://github.com/mortenaho/Lisek/releases/latest/download/Lisek.AppImage) · [Linux RPM](https://github.com/mortenaho/Lisek/releases/latest/download/Lisek.rpm) · [All releases](https://github.com/mortenaho/Lisek/releases/latest)
+**Download:** [Windows installer](https://github.com/mortenaho/Lisek/releases/latest/download/Lisek-Setup.exe) · [Linux AppImage](https://github.com/mortenaho/Lisek/releases/latest/download/Lisek.AppImage) · [Linux DEB](https://github.com/mortenaho/Lisek/releases/latest/download/Lisek.deb) · [Linux RPM](https://github.com/mortenaho/Lisek/releases/latest/download/Lisek.rpm) · [All releases](https://github.com/mortenaho/Lisek/releases/latest)
 
 <p align="center">
   <img src="docs/assets/logo.png" alt="Lisek" width="160" height="160">
