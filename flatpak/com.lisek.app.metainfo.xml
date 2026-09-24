@@ -35,6 +35,12 @@
   </description>
   <launchable type="desktop-id">com.lisek.app.desktop</launchable>
   <releases>
+    <release version="1.6.5" date="2026-09-24">
+      <description>
+        <p>Faster request editor typing, Linux DEB packages, and docs download updates.</p>
+      </description>
+      <url type="details">https://github.com/mortenaho/Lisek/releases/tag/v1.6.5</url>
+    </release>
     <release version="1.6.4" date="2026-07-14">
       <description>
         <p>Smarter collection search, Flatpak packaging for Flathub, and a redesigned docs site.</p>

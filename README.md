@@ -178,8 +178,8 @@ Live at **https://mortenaho.github.io/Lisek/**
 Push a version tag to trigger the Windows + Linux build workflow:
 
 ```bash
-git tag v1.6.4
-git push origin v1.6.4
+git tag v1.6.5
+git push origin v1.6.5
 ```
 
 Or run **Actions → Release → Run workflow** with the tag name.
