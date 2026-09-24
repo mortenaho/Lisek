@@ -7,9 +7,9 @@ import {
   Typography
 } from '@mui/material'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
-import { useCallback } from 'react'
+import { memo, useCallback } from 'react'
 import CodeEditor from '../../components/CodeEditor'
-import { useRequestEditor } from '../../contexts/RequestEditorContext'
+import { useRequestEditorActions, useRequestField } from '../../contexts/RequestEditorContext'
 import { COMPACT } from '../../theme/compact'
 
 const PM_API = [
@@ -22,15 +22,73 @@ const PM_API = [
   'pm.test(name, fn) · pm.expect(x).to.equal(y)'
 ]
 
-export default function ScriptsTab() {
-  const { request, patch } = useRequestEditor()
+const PreRequestEditor = memo(function PreRequestEditor() {
+  const { patch } = useRequestEditorActions()
+  const requestId = useRequestField('id')
+  const value = useRequestField('preRequestScript')
+  const onChange = useCallback((preRequestScript: string) => patch({ preRequestScript }), [patch])
 
-  const patchPreRequest = useCallback(
-    (preRequestScript: string) => patch({ preRequestScript }),
-    [patch]
+  return (
+    <Paper variant="outlined" sx={{ overflow: 'hidden', height: '100%' }}>
+      <Box
+        sx={{
+          px: 0.75,
+          py: 0.375,
+          bgcolor: 'action.hover',
+          borderBottom: 1,
+          borderColor: 'divider'
+        }}
+      >
+        <Typography sx={{ fontSize: 11, fontWeight: 600, lineHeight: 1.3 }}>Pre-request</Typography>
+        <Typography sx={COMPACT.caption}>Runs before send</Typography>
+      </Box>
+      <Box sx={{ p: 0.5 }}>
+        <CodeEditor
+          editorKey={`${requestId}-pre`}
+          height="130px"
+          language="javascript"
+          value={value}
+          onChange={onChange}
+        />
+      </Box>
+    </Paper>
   )
-  const patchTestScript = useCallback((testScript: string) => patch({ testScript }), [patch])
+})
 
+const TestScriptEditor = memo(function TestScriptEditor() {
+  const { patch } = useRequestEditorActions()
+  const requestId = useRequestField('id')
+  const value = useRequestField('testScript')
+  const onChange = useCallback((testScript: string) => patch({ testScript }), [patch])
+
+  return (
+    <Paper variant="outlined" sx={{ overflow: 'hidden', height: '100%' }}>
+      <Box
+        sx={{
+          px: 0.75,
+          py: 0.375,
+          bgcolor: 'action.hover',
+          borderBottom: 1,
+          borderColor: 'divider'
+        }}
+      >
+        <Typography sx={{ fontSize: 11, fontWeight: 600, lineHeight: 1.3 }}>Tests</Typography>
+        <Typography sx={COMPACT.caption}>Runs after response</Typography>
+      </Box>
+      <Box sx={{ p: 0.5 }}>
+        <CodeEditor
+          editorKey={`${requestId}-test`}
+          height="130px"
+          language="javascript"
+          value={value}
+          onChange={onChange}
+        />
+      </Box>
+    </Paper>
+  )
+})
+
+export default function ScriptsTab() {
   return (
     <Box>
       <Box
@@ -40,53 +98,8 @@ export default function ScriptsTab() {
           gap: 0.75
         }}
       >
-        <Paper variant="outlined" sx={{ overflow: 'hidden', height: '100%' }}>
-          <Box
-            sx={{
-              px: 0.75,
-              py: 0.375,
-              bgcolor: 'action.hover',
-              borderBottom: 1,
-              borderColor: 'divider'
-            }}
-          >
-            <Typography sx={{ fontSize: 11, fontWeight: 600, lineHeight: 1.3 }}>Pre-request</Typography>
-            <Typography sx={COMPACT.caption}>Runs before send</Typography>
-          </Box>
-          <Box sx={{ p: 0.5 }}>
-            <CodeEditor
-              editorKey={`${request.id}-pre`}
-              height="130px"
-              language="javascript"
-              value={request.preRequestScript}
-              onChange={patchPreRequest}
-            />
-          </Box>
-        </Paper>
-
-        <Paper variant="outlined" sx={{ overflow: 'hidden', height: '100%' }}>
-          <Box
-            sx={{
-              px: 0.75,
-              py: 0.375,
-              bgcolor: 'action.hover',
-              borderBottom: 1,
-              borderColor: 'divider'
-            }}
-          >
-            <Typography sx={{ fontSize: 11, fontWeight: 600, lineHeight: 1.3 }}>Tests</Typography>
-            <Typography sx={COMPACT.caption}>Runs after response</Typography>
-          </Box>
-          <Box sx={{ p: 0.5 }}>
-            <CodeEditor
-              editorKey={`${request.id}-test`}
-              height="130px"
-              language="javascript"
-              value={request.testScript}
-              onChange={patchTestScript}
-            />
-          </Box>
-        </Paper>
+        <PreRequestEditor />
+        <TestScriptEditor />
       </Box>
 
       <Accordion

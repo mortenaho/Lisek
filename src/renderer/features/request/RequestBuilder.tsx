@@ -25,7 +25,11 @@ import ContentTypeSelect from '../../components/ContentTypeSelect'
 import { effectiveContentType, isJsonContentType, languageForContentType } from '../../utils/contentTypes'
 import { readContentTypeHeader, upsertContentTypeHeader } from '../../utils/requestHeaders'
 import { useAppStore } from '../../stores/appStore'
-import { RequestEditorProvider, useRequestEditor } from '../../contexts/RequestEditorContext'
+import {
+  RequestEditorProvider,
+  useRequestEditorActions,
+  useRequestField
+} from '../../contexts/RequestEditorContext'
 import KeyValueEditor from '../../components/KeyValueEditor'
 import RequestTabPanel from '../../components/RequestTabPanel'
 import AuthTab from './AuthTab'
@@ -135,6 +139,506 @@ const SendButton = memo(function SendButton({
   )
 })
 
+const RequestUrlBar = memo(function RequestUrlBar({
+  collectionVariables,
+  onDelete,
+  onSend
+}: {
+  collectionVariables: KeyValue[]
+  onDelete: () => void
+  onSend: () => void
+}) {
+  const { patch } = useRequestEditorActions()
+  const requestId = useRequestField('id')
+  const protocol = useRequestField('protocol')
+  const method = useRequestField('method')
+  const url = useRequestField('url')
+  const wsUrl = useRequestField('wsUrl')
+  const sseUrl = useRequestField('sseUrl')
+  const grpcTarget = useRequestField('grpcTarget')
+
+  const patchUrl = useCallback((next: string) => patch({ url: next }), [patch])
+
+  const handleUrlFieldKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault()
+        onSend()
+      }
+    },
+    [onSend]
+  )
+
+  const handleCancel = useCallback(async () => {
+    const id = useAppStore.getState().activeRequest?.id
+    if (id) await window.lisek.request.cancel(id)
+    useAppStore.setState({ loading: false })
+  }, [])
+
+  return (
+    <Box
+      sx={{
+        display: 'flex',
+        gap: 0.75,
+        mb: 0.75,
+        alignItems: 'center',
+        flexWrap: 'nowrap'
+      }}
+    >
+      <Select
+        size="small"
+        value={protocol}
+        onChange={(e) => patch({ protocol: e.target.value as Protocol })}
+        sx={{ minWidth: 72, ...COMPACT.select }}
+      >
+        {PROTOCOLS.map((p) => (
+          <MenuItem key={p} value={p} sx={{ fontSize: 11 }}>
+            {p.toUpperCase()}
+          </MenuItem>
+        ))}
+      </Select>
+      {protocol === 'http' || protocol === 'graphql' ? (
+        <>
+          <Select
+            size="small"
+            value={method}
+            onChange={(e) => patch({ method: e.target.value as HttpMethod })}
+            sx={{
+              minWidth: 72,
+              ...COMPACT.select,
+              bgcolor: METHOD_COLORS[method],
+              color: '#fff',
+              fontWeight: 700,
+              '.MuiOutlinedInput-notchedOutline': { border: 'none' },
+              '.MuiSvgIcon-root': { color: '#fff' },
+              '.MuiSelect-select': { color: '#fff !important' }
+            }}
+          >
+            {METHODS.map((m) => (
+              <MenuItem key={m} value={m} sx={{ fontSize: 11 }}>
+                {m}
+              </MenuItem>
+            ))}
+          </Select>
+          <VariableInput
+            syncKey={requestId}
+            value={url}
+            onChange={patchUrl}
+            onEnter={onSend}
+            placeholder="https://api.example.com or {{baseUrl}}/path"
+            collectionVariables={collectionVariables}
+          />
+        </>
+      ) : protocol === 'websocket' ? (
+        <TextField
+          size="small"
+          fullWidth
+          placeholder="ws://localhost:8080"
+          value={wsUrl}
+          onChange={(e) =>
+            applyControlledInputChange(e.target, wsUrl, e.target.value, (v) => patch({ wsUrl: v }))
+          }
+          onKeyDown={handleUrlFieldKeyDown}
+          sx={COMPACT.input}
+        />
+      ) : protocol === 'sse' ? (
+        <TextField
+          size="small"
+          fullWidth
+          placeholder="https://api.example.com/events"
+          value={sseUrl}
+          onChange={(e) =>
+            applyControlledInputChange(e.target, sseUrl, e.target.value, (v) =>
+              patch({ sseUrl: v, url: v })
+            )
+          }
+          onKeyDown={handleUrlFieldKeyDown}
+          sx={COMPACT.input}
+        />
+      ) : (
+        <TextField
+          size="small"
+          fullWidth
+          placeholder="localhost:50051"
+          value={grpcTarget}
+          onChange={(e) =>
+            applyControlledInputChange(e.target, grpcTarget, e.target.value, (v) =>
+              patch({ grpcTarget: v })
+            )
+          }
+          onKeyDown={handleUrlFieldKeyDown}
+          sx={COMPACT.input}
+        />
+      )}
+      <SendButton onSend={onSend} onCancel={() => void handleCancel()} />
+      {requestId ? (
+        <Tooltip title="Delete request">
+          <IconButton color="error" onClick={onDelete} sx={COMPACT.iconBtn}>
+            <DeleteOutlineIcon sx={COMPACT.icon} />
+          </IconButton>
+        </Tooltip>
+      ) : null}
+    </Box>
+  )
+})
+
+const RequestMetaFields = memo(function RequestMetaFields() {
+  const { patch } = useRequestEditorActions()
+  const requestId = useRequestField('id')
+  const tags = useRequestField('tags')
+  const notes = useRequestField('notes')
+  const [tagsText, setTagsText] = useState(() => (tags || []).join(', '))
+
+  useEffect(() => {
+    setTagsText((tags || []).join(', '))
+  }, [requestId])
+
+  return (
+    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+      <TextField
+        size="small"
+        placeholder="Tags: smoke, api"
+        value={tagsText}
+        onChange={(e) => {
+          applyControlledInputChange(e.target, tagsText, e.target.value, (raw) => {
+            setTagsText(raw)
+            patch({
+              tags: raw
+                .split(',')
+                .map((t) => t.trim())
+                .filter(Boolean)
+            })
+          })
+        }}
+        sx={{ minWidth: 140, flex: 1, ...COMPACT.input }}
+      />
+      <TextField
+        size="small"
+        placeholder="Notes (optional)"
+        value={notes || ''}
+        onChange={(e) => {
+          applyControlledInputChange(e.target, notes || '', e.target.value, (v) => patch({ notes: v }))
+        }}
+        sx={{ minWidth: 180, flex: 2, ...COMPACT.input }}
+      />
+    </Box>
+  )
+})
+
+const ParamsSection = memo(function ParamsSection() {
+  const { patch } = useRequestEditorActions()
+  const params = useRequestField('params')
+  const patchParams = useCallback((next: KeyValue[]) => patch({ params: next }), [patch])
+
+  return (
+    <KeyValueEditor
+      items={params}
+      onChange={patchParams}
+      keyLabel="Param"
+      description="Query string parameters appended to the URL."
+      emptyTitle="No query parameters"
+      emptyHint="Add params like page, limit, or filter"
+      keyPlaceholder="param_name"
+      valuePlaceholder="value or {{var}}"
+    />
+  )
+})
+
+const HeadersSection = memo(function HeadersSection() {
+  const { patch } = useRequestEditorActions()
+  const headers = useRequestField('headers')
+  const bodyType = useRequestField('bodyType')
+  const bodyRawContentType = useRequestField('bodyRawContentType')
+
+  const patchHeaders = useCallback(
+    (next: KeyValue[]) => {
+      const contentType = readContentTypeHeader(next)
+      patch({
+        headers: next,
+        ...(bodyType === 'raw' && contentType !== undefined ? { bodyRawContentType: contentType } : {})
+      })
+    },
+    [patch, bodyType]
+  )
+
+  const patchBodyContentType = useCallback(
+    (nextType: string) => {
+      patch({
+        bodyRawContentType: nextType,
+        headers: upsertContentTypeHeader(headers, nextType)
+      })
+    },
+    [patch, headers]
+  )
+
+  const contentTypeValue = effectiveContentType(bodyType, bodyRawContentType)
+  const showContentTypeInHeaders = bodyType !== 'none'
+
+  return (
+    <Box>
+      {showContentTypeInHeaders && (
+        <Box sx={{ mb: 1, pb: 1, borderBottom: 1, borderColor: 'divider' }}>
+          {bodyType === 'raw' ? (
+            <ContentTypeSelect value={bodyRawContentType} onChange={patchBodyContentType} />
+          ) : (
+            <Box>
+              <Typography sx={{ ...COMPACT.caption, display: 'block', mb: 0.25 }}>Content-Type</Typography>
+              <Chip
+                label={contentTypeValue}
+                size="small"
+                variant="outlined"
+                sx={{ fontFamily: 'Consolas, monospace', fontSize: 10, height: 20 }}
+              />
+            </Box>
+          )}
+        </Box>
+      )}
+      <KeyValueEditor
+        items={headers}
+        onChange={patchHeaders}
+        keyPlaceholder="Header-Name"
+        valuePlaceholder="value or {{var}}"
+      />
+    </Box>
+  )
+})
+
+const BodySection = memo(function BodySection({
+  onFormatError
+}: {
+  onFormatError: (message: string | null) => void
+}) {
+  const { patch } = useRequestEditorActions()
+  const requestId = useRequestField('id')
+  const bodyType = useRequestField('bodyType')
+  const bodyRaw = useRequestField('bodyRaw')
+  const bodyRawContentType = useRequestField('bodyRawContentType')
+  const formData = useRequestField('formData')
+  const urlEncoded = useRequestField('urlEncoded')
+
+  const patchFormData = useCallback((next: KeyValue[]) => patch({ formData: next }), [patch])
+  const patchUrlEncoded = useCallback((next: KeyValue[]) => patch({ urlEncoded: next }), [patch])
+  const patchBodyRaw = useCallback((next: string) => patch({ bodyRaw: next }), [patch])
+
+  const formatBodyJson = useCallback(() => {
+    const raw = bodyRaw.trim()
+    if (!raw) {
+      onFormatError('Body is empty')
+      return
+    }
+    try {
+      const parsed = JSON.parse(raw)
+      patch({ bodyRaw: JSON.stringify(parsed, null, 2) })
+      onFormatError(null)
+    } catch {
+      onFormatError('Invalid JSON — cannot format')
+    }
+  }, [bodyRaw, patch, onFormatError])
+
+  const isJsonBody = isJsonContentType(bodyRawContentType)
+  const bodyLanguage = languageForContentType(bodyRawContentType)
+
+  return (
+    <Box
+      sx={{
+        flex: 1,
+        minHeight: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: bodyType === 'raw' ? 'hidden' : 'auto'
+      }}
+    >
+      <ToggleButtonGroup
+        exclusive
+        size="small"
+        value={bodyType}
+        onChange={(_, value: BodyType | null) => value && patch({ bodyType: value })}
+        sx={{
+          mb: 1,
+          flexShrink: 0,
+          flexWrap: 'wrap',
+          gap: 0.25,
+          '& .MuiToggleButtonGroup-grouped': {
+            border: 1,
+            borderColor: 'divider',
+            borderRadius: '4px !important',
+            mx: '0 !important',
+            px: 0.75,
+            py: 0.125,
+            textTransform: 'none',
+            fontWeight: 500,
+            fontSize: 10,
+            lineHeight: 1.3
+          }
+        }}
+      >
+        <ToggleButton value="none">None</ToggleButton>
+        <ToggleButton value="raw">Raw</ToggleButton>
+        <ToggleButton value="form-data">Form</ToggleButton>
+        <ToggleButton value="x-www-form-urlencoded">URL Enc</ToggleButton>
+      </ToggleButtonGroup>
+
+      {bodyType === 'none' && (
+        <Box
+          sx={{
+            py: 1.5,
+            px: 1,
+            textAlign: 'center',
+            border: 1,
+            borderStyle: 'dashed',
+            borderColor: 'divider',
+            borderRadius: 0.75,
+            bgcolor: 'action.hover'
+          }}
+        >
+          <Typography sx={COMPACT.caption}>No body (typical for GET, HEAD, DELETE)</Typography>
+        </Box>
+      )}
+
+      {bodyType === 'raw' && (
+        <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+          {isJsonBody && (
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 0.25, flexShrink: 0 }}>
+              <Tooltip title="Format JSON">
+                <IconButton
+                  size="small"
+                  onClick={formatBodyJson}
+                  disabled={!bodyRaw.trim()}
+                  sx={COMPACT.iconBtn}
+                >
+                  <AutoFixHighIcon sx={COMPACT.icon} />
+                </IconButton>
+              </Tooltip>
+            </Box>
+          )}
+          <Box sx={{ flex: 1, minHeight: 160, overflow: 'hidden' }}>
+            <CodeEditor
+              editorKey={`${requestId}-body-${bodyLanguage}`}
+              height="100%"
+              language={bodyLanguage}
+              value={bodyRaw}
+              onChange={patchBodyRaw}
+            />
+          </Box>
+        </Box>
+      )}
+
+      {bodyType === 'form-data' && (
+        <KeyValueEditor
+          items={formData}
+          onChange={patchFormData}
+          allowFiles
+          description="Multipart form fields. Attach files using the clip icon."
+          emptyTitle="No form fields"
+          emptyHint="Add text fields or file uploads"
+          keyPlaceholder="field_name"
+          valuePlaceholder="value"
+        />
+      )}
+
+      {bodyType === 'x-www-form-urlencoded' && (
+        <KeyValueEditor
+          items={urlEncoded}
+          onChange={patchUrlEncoded}
+          description="URL-encoded key-value pairs in the request body."
+          emptyTitle="No URL-encoded fields"
+          emptyHint="Add application/x-www-form-urlencoded fields"
+          keyPlaceholder="field_name"
+          valuePlaceholder="value"
+        />
+      )}
+    </Box>
+  )
+})
+
+const SectionTabs = memo(function SectionTabs({
+  section,
+  onSectionChange
+}: {
+  section: RequestSection
+  onSectionChange: (section: RequestSection) => void
+}) {
+  const params = useRequestField('params')
+  const headers = useRequestField('headers')
+  const authType = useRequestField('authType')
+  const preRequestScript = useRequestField('preRequestScript')
+  const testScript = useRequestField('testScript')
+  const protocol = useRequestField('protocol')
+
+  const paramCount = useMemo(() => countActive(params), [params])
+  const headerCount = useMemo(() => countActive(headers), [headers])
+  const hasAuth = authType !== 'none'
+  const hasScripts = !!(preRequestScript.trim() || testScript.trim())
+
+  const protocolTabLabel =
+    protocol === 'graphql'
+      ? 'GraphQL'
+      : protocol === 'websocket'
+        ? 'WebSocket'
+        : protocol === 'sse'
+          ? 'SSE'
+          : protocol === 'grpc'
+            ? 'gRPC'
+            : null
+
+  return (
+    <Tabs
+      value={section}
+      onChange={(_, v: RequestSection) => onSectionChange(v)}
+      variant="scrollable"
+      scrollButtons="auto"
+      sx={{
+        minHeight: 28,
+        flexShrink: 0,
+        borderBottom: 1,
+        borderColor: 'divider',
+        '& .MuiTabs-indicator': { height: 2 },
+        '& .MuiTab-root': COMPACT.tabRoot
+      }}
+    >
+      <Tab value="params" label={<TabLabel label="Params" count={paramCount} />} />
+      <Tab value="headers" label={<TabLabel label="Headers" count={headerCount} />} />
+      <Tab value="body" label="Body" />
+      <Tab value="auth" label={<TabLabel label="Auth" count={hasAuth ? 1 : 0} />} />
+      <Tab value="scripts" label={<TabLabel label="Scripts" count={hasScripts ? 1 : 0} />} />
+      {protocolTabLabel && <Tab value="protocol" label={protocolTabLabel} />}
+    </Tabs>
+  )
+})
+
+const ActiveSection = memo(function ActiveSection({
+  section,
+  onFormatError
+}: {
+  section: RequestSection
+  onFormatError: (message: string | null) => void
+}) {
+  const protocol = useRequestField('protocol')
+  const bodyType = useRequestField('bodyType')
+
+  return (
+    <RequestTabPanel
+      sx={{
+        flex: 1,
+        minHeight: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: section === 'body' && bodyType === 'raw' ? 'hidden' : 'auto'
+      }}
+    >
+      {section === 'params' && <ParamsSection />}
+      {section === 'headers' && <HeadersSection />}
+      {section === 'body' && <BodySection onFormatError={onFormatError} />}
+      {section === 'auth' && <AuthTab />}
+      {section === 'scripts' && <ScriptsTab />}
+      {section === 'protocol' && protocol === 'graphql' && <GraphQLTab />}
+      {section === 'protocol' && protocol === 'websocket' && <WebSocketTab />}
+      {section === 'protocol' && protocol === 'sse' && <SseTab />}
+      {section === 'protocol' && protocol === 'grpc' && <GrpcTab />}
+    </RequestTabPanel>
+  )
+})
+
 function RequestBuilderForm({
   collectionVariables,
   onDelete
@@ -142,12 +646,13 @@ function RequestBuilderForm({
   collectionVariables: KeyValue[]
   onDelete: () => void
 }) {
-  const { request, patch, flush } = useRequestEditor()
+  const { flush } = useRequestEditorActions()
+  const requestId = useRequestField('id')
+  const bodyType = useRequestField('bodyType')
   const sendRequest = useAppStore((s) => s.sendRequest)
   const snippetOpen = useAppStore((s) => s.snippetOpen)
   const [section, setSection] = useState<RequestSection>('params')
   const [jsonFormatError, setJsonFormatError] = useState<string | null>(null)
-  const [tagsText, setTagsText] = useState(() => (request.tags || []).join(', '))
   const [responseWidth, setResponseWidth] = useState(() =>
     clamp(readStoredSize(STORAGE_RESPONSE, RESPONSE_DEFAULT), RESPONSE_MIN, RESPONSE_MAX)
   )
@@ -169,58 +674,18 @@ function RequestBuilderForm({
     storeSize(STORAGE_RESPONSE, width)
   }, [])
 
-  const paramCount = useMemo(() => countActive(request.params), [request.params])
-  const headerCount = useMemo(() => countActive(request.headers), [request.headers])
-  const hasAuth = request.authType !== 'none'
-  const hasScripts = !!(request.preRequestScript.trim() || request.testScript.trim())
-
-  const protocolTabLabel =
-    request.protocol === 'graphql'
-      ? 'GraphQL'
-      : request.protocol === 'websocket'
-        ? 'WebSocket'
-        : request.protocol === 'sse'
-          ? 'SSE'
-          : request.protocol === 'grpc'
-            ? 'gRPC'
-            : null
-
   useEffect(() => {
     if (snippetOpen) flush()
   }, [snippetOpen, flush])
 
   useEffect(() => {
-    if (request.bodyType !== 'none') setSection('body')
-  }, [request.id, request.bodyType])
-
-  useEffect(() => {
-    setTagsText((request.tags || []).join(', '))
-  }, [request.id])
+    if (bodyType !== 'none') setSection('body')
+  }, [requestId, bodyType])
 
   const handleSend = useCallback(async () => {
     flush()
     await sendRequest()
   }, [flush, sendRequest])
-
-  const handleCancel = useCallback(async () => {
-    const id = useAppStore.getState().activeRequest?.id
-    if (id) await window.lisek.request.cancel(id)
-    useAppStore.setState({ loading: false })
-  }, [])
-
-  const handleUrlEnter = useCallback(() => {
-    void handleSend()
-  }, [handleSend])
-
-  const handleUrlFieldKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault()
-        void handleSend()
-      }
-    },
-    [handleSend]
-  )
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -229,189 +694,15 @@ function RequestBuilderForm({
     [handleSend]
   )
 
-  const patchUrl = useCallback((url: string) => patch({ url }), [patch])
-  const patchParams = useCallback((params: KeyValue[]) => patch({ params }), [patch])
-  const patchHeaders = useCallback(
-    (headers: KeyValue[]) => {
-      const contentType = readContentTypeHeader(headers)
-      patch({
-        headers,
-        ...(request.bodyType === 'raw' && contentType !== undefined
-          ? { bodyRawContentType: contentType }
-          : {})
-      })
-    },
-    [patch, request.bodyType]
-  )
-  const patchFormData = useCallback((formData: KeyValue[]) => patch({ formData }), [patch])
-  const patchUrlEncoded = useCallback((urlEncoded: KeyValue[]) => patch({ urlEncoded }), [patch])
-  const patchBodyRaw = useCallback((bodyRaw: string) => patch({ bodyRaw }), [patch])
-  const patchBodyContentType = useCallback(
-    (bodyRawContentType: string) => {
-      patch({
-        bodyRawContentType,
-        headers: upsertContentTypeHeader(request.headers, bodyRawContentType)
-      })
-    },
-    [patch, request.headers]
-  )
-
-  const contentTypeValue = effectiveContentType(request.bodyType, request.bodyRawContentType)
-  const showContentTypeInHeaders = request.bodyType !== 'none'
-
-  const formatBodyJson = useCallback(() => {
-    const raw = request.bodyRaw.trim()
-    if (!raw) {
-      setJsonFormatError('Body is empty')
-      return
-    }
-    try {
-      const parsed = JSON.parse(raw)
-      patch({ bodyRaw: JSON.stringify(parsed, null, 2) })
-      setJsonFormatError(null)
-    } catch {
-      setJsonFormatError('Invalid JSON — cannot format')
-    }
-  }, [request.bodyRaw, patch])
-
-  const isJsonBody = isJsonContentType(request.bodyRawContentType)
-  const bodyLanguage = languageForContentType(request.bodyRawContentType)
+  const onFormatError = useCallback((message: string | null) => {
+    setJsonFormatError(message)
+  }, [])
 
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0 }} onKeyDown={handleKeyDown}>
       <Box sx={{ px: 1, pt: 1, pb: 0.75, flexShrink: 0, borderBottom: 1, borderColor: 'divider', bgcolor: 'background.paper' }}>
-        <Box
-          sx={{
-            display: 'flex',
-            gap: 0.75,
-            mb: 0.75,
-            alignItems: 'center',
-            flexWrap: 'nowrap'
-          }}
-        >
-          <Select
-            size="small"
-            value={request.protocol}
-            onChange={(e) => patch({ protocol: e.target.value as Protocol })}
-            sx={{ minWidth: 72, ...COMPACT.select }}
-          >
-            {PROTOCOLS.map((p) => (
-              <MenuItem key={p} value={p} sx={{ fontSize: 11 }}>
-                {p.toUpperCase()}
-              </MenuItem>
-            ))}
-          </Select>
-          {request.protocol === 'http' || request.protocol === 'graphql' ? (
-            <>
-              <Select
-                size="small"
-                value={request.method}
-                onChange={(e) => patch({ method: e.target.value as HttpMethod })}
-                sx={{
-                  minWidth: 72,
-                  ...COMPACT.select,
-                  bgcolor: METHOD_COLORS[request.method],
-                  color: '#fff',
-                  fontWeight: 700,
-                  '.MuiOutlinedInput-notchedOutline': { border: 'none' },
-                  '.MuiSvgIcon-root': { color: '#fff' },
-                  '.MuiSelect-select': { color: '#fff !important' }
-                }}
-              >
-                {METHODS.map((m) => (
-                  <MenuItem key={m} value={m} sx={{ fontSize: 11 }}>
-                    {m}
-                  </MenuItem>
-                ))}
-              </Select>
-              <VariableInput
-                syncKey={request.id}
-                value={request.url}
-                onChange={patchUrl}
-                onEnter={handleUrlEnter}
-                placeholder="https://api.example.com or {{baseUrl}}/path"
-                collectionVariables={collectionVariables}
-              />
-            </>
-          ) : request.protocol === 'websocket' ? (
-            <TextField
-              size="small"
-              fullWidth
-              placeholder="ws://localhost:8080"
-              value={request.wsUrl}
-              onChange={(e) =>
-                applyControlledInputChange(e.target, request.wsUrl, e.target.value, (v) => patch({ wsUrl: v }))
-              }
-              onKeyDown={handleUrlFieldKeyDown}
-              sx={COMPACT.input}
-            />
-          ) : request.protocol === 'sse' ? (
-            <TextField
-              size="small"
-              fullWidth
-              placeholder="https://api.example.com/events"
-              value={request.sseUrl}
-              onChange={(e) =>
-                applyControlledInputChange(e.target, request.sseUrl, e.target.value, (v) => patch({ sseUrl: v, url: v }))
-              }
-              onKeyDown={handleUrlFieldKeyDown}
-              sx={COMPACT.input}
-            />
-          ) : (
-            <TextField
-              size="small"
-              fullWidth
-              placeholder="localhost:50051"
-              value={request.grpcTarget}
-              onChange={(e) =>
-                applyControlledInputChange(e.target, request.grpcTarget, e.target.value, (v) =>
-                  patch({ grpcTarget: v })
-                )
-              }
-              onKeyDown={handleUrlFieldKeyDown}
-              sx={COMPACT.input}
-            />
-          )}
-          <SendButton onSend={handleSend} onCancel={() => void handleCancel()} />
-          {request.id && (
-            <Tooltip title="Delete request">
-              <IconButton color="error" onClick={onDelete} sx={COMPACT.iconBtn}>
-                <DeleteOutlineIcon sx={COMPACT.icon} />
-              </IconButton>
-            </Tooltip>
-          )}
-        </Box>
-
-        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-          <TextField
-            size="small"
-            placeholder="Tags: smoke, api"
-            value={tagsText}
-            onChange={(e) => {
-              applyControlledInputChange(e.target, tagsText, e.target.value, (raw) => {
-                setTagsText(raw)
-                patch({
-                  tags: raw
-                    .split(',')
-                    .map((t) => t.trim())
-                    .filter(Boolean)
-                })
-              })
-            }}
-            sx={{ minWidth: 140, flex: 1, ...COMPACT.input }}
-          />
-          <TextField
-            size="small"
-            placeholder="Notes (optional)"
-            value={request.notes || ''}
-            onChange={(e) => {
-              applyControlledInputChange(e.target, request.notes || '', e.target.value, (v) =>
-                patch({ notes: v })
-              )
-            }}
-            sx={{ minWidth: 180, flex: 2, ...COMPACT.input }}
-          />
-        </Box>
+        <RequestUrlBar collectionVariables={collectionVariables} onDelete={onDelete} onSend={handleSend} />
+        <RequestMetaFields />
       </Box>
 
       <Box sx={{ flex: 1, minHeight: 0, display: 'flex', overflow: 'hidden' }}>
@@ -428,202 +719,8 @@ function RequestBuilderForm({
             borderColor: 'divider'
           }}
         >
-          <Tabs
-            value={section}
-            onChange={(_, v: RequestSection) => setSection(v)}
-            variant="scrollable"
-            scrollButtons="auto"
-            sx={{
-              minHeight: 28,
-              flexShrink: 0,
-              borderBottom: 1,
-              borderColor: 'divider',
-              '& .MuiTabs-indicator': { height: 2 },
-              '& .MuiTab-root': COMPACT.tabRoot
-            }}
-          >
-            <Tab value="params" label={<TabLabel label="Params" count={paramCount} />} />
-            <Tab value="headers" label={<TabLabel label="Headers" count={headerCount} />} />
-            <Tab value="body" label="Body" />
-            <Tab value="auth" label={<TabLabel label="Auth" count={hasAuth ? 1 : 0} />} />
-            <Tab value="scripts" label={<TabLabel label="Scripts" count={hasScripts ? 1 : 0} />} />
-            {protocolTabLabel && <Tab value="protocol" label={protocolTabLabel} />}
-          </Tabs>
-
-          <RequestTabPanel
-            sx={{
-              flex: 1,
-              minHeight: 0,
-              display: 'flex',
-              flexDirection: 'column',
-              overflow: section === 'body' && request.bodyType === 'raw' ? 'hidden' : 'auto'
-            }}
-          >
-        {section === 'params' && (
-          <KeyValueEditor
-            items={request.params}
-            onChange={patchParams}
-            keyLabel="Param"
-            description="Query string parameters appended to the URL."
-            emptyTitle="No query parameters"
-            emptyHint="Add params like page, limit, or filter"
-            keyPlaceholder="param_name"
-            valuePlaceholder="value or {{var}}"
-          />
-        )}
-
-        {section === 'headers' && (
-          <Box>
-            {showContentTypeInHeaders && (
-              <Box sx={{ mb: 1, pb: 1, borderBottom: 1, borderColor: 'divider' }}>
-                {request.bodyType === 'raw' ? (
-                  <ContentTypeSelect
-                    value={request.bodyRawContentType}
-                    onChange={patchBodyContentType}
-                  />
-                ) : (
-                  <Box>
-                    <Typography sx={{ ...COMPACT.caption, display: 'block', mb: 0.25 }}>
-                      Content-Type
-                    </Typography>
-                    <Chip
-                      label={contentTypeValue}
-                      size="small"
-                      variant="outlined"
-                      sx={{ fontFamily: 'Consolas, monospace', fontSize: 10, height: 20 }}
-                    />
-                  </Box>
-                )}
-              </Box>
-            )}
-            <KeyValueEditor
-              items={request.headers}
-              onChange={patchHeaders}
-              keyPlaceholder="Header-Name"
-              valuePlaceholder="value or {{var}}"
-            />
-          </Box>
-        )}
-
-        {section === 'body' && (
-          <Box
-            sx={{
-              flex: 1,
-              minHeight: 0,
-              display: 'flex',
-              flexDirection: 'column',
-              overflow: request.bodyType === 'raw' ? 'hidden' : 'auto'
-            }}
-          >
-            <ToggleButtonGroup
-              exclusive
-              size="small"
-              value={request.bodyType}
-              onChange={(_, value: BodyType | null) => value && patch({ bodyType: value })}
-              sx={{
-                mb: 1,
-                flexShrink: 0,
-                flexWrap: 'wrap',
-                gap: 0.25,
-                '& .MuiToggleButtonGroup-grouped': {
-                  border: 1,
-                  borderColor: 'divider',
-                  borderRadius: '4px !important',
-                  mx: '0 !important',
-                  px: 0.75,
-                  py: 0.125,
-                  textTransform: 'none',
-                  fontWeight: 500,
-                  fontSize: 10,
-                  lineHeight: 1.3
-                }
-              }}
-            >
-              <ToggleButton value="none">None</ToggleButton>
-              <ToggleButton value="raw">Raw</ToggleButton>
-              <ToggleButton value="form-data">Form</ToggleButton>
-              <ToggleButton value="x-www-form-urlencoded">URL Enc</ToggleButton>
-            </ToggleButtonGroup>
-
-            {request.bodyType === 'none' && (
-              <Box
-                sx={{
-                  py: 1.5,
-                  px: 1,
-                  textAlign: 'center',
-                  border: 1,
-                  borderStyle: 'dashed',
-                  borderColor: 'divider',
-                  borderRadius: 0.75,
-                  bgcolor: 'action.hover'
-                }}
-              >
-                <Typography sx={COMPACT.caption}>No body (typical for GET, HEAD, DELETE)</Typography>
-              </Box>
-            )}
-
-            {request.bodyType === 'raw' && (
-              <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-                {isJsonBody && (
-                  <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 0.25, flexShrink: 0 }}>
-                    <Tooltip title="Format JSON">
-                      <IconButton
-                        size="small"
-                        onClick={formatBodyJson}
-                        disabled={!request.bodyRaw.trim()}
-                        sx={COMPACT.iconBtn}
-                      >
-                        <AutoFixHighIcon sx={COMPACT.icon} />
-                      </IconButton>
-                    </Tooltip>
-                  </Box>
-                )}
-                <Box sx={{ flex: 1, minHeight: 160, overflow: 'hidden' }}>
-                  <CodeEditor
-                    editorKey={`${request.id}-body-${bodyLanguage}`}
-                    height="100%"
-                    language={bodyLanguage}
-                    value={request.bodyRaw}
-                    onChange={patchBodyRaw}
-                  />
-                </Box>
-              </Box>
-            )}
-
-            {request.bodyType === 'form-data' && (
-              <KeyValueEditor
-                items={request.formData}
-                onChange={patchFormData}
-                allowFiles
-                description="Multipart form fields. Attach files using the clip icon."
-                emptyTitle="No form fields"
-                emptyHint="Add text fields or file uploads"
-                keyPlaceholder="field_name"
-                valuePlaceholder="value"
-              />
-            )}
-
-            {request.bodyType === 'x-www-form-urlencoded' && (
-              <KeyValueEditor
-                items={request.urlEncoded}
-                onChange={patchUrlEncoded}
-                description="URL-encoded key-value pairs in the request body."
-                emptyTitle="No URL-encoded fields"
-                emptyHint="Add application/x-www-form-urlencoded fields"
-                keyPlaceholder="field_name"
-                valuePlaceholder="value"
-              />
-            )}
-          </Box>
-        )}
-
-        {section === 'auth' && <AuthTab />}
-        {section === 'scripts' && <ScriptsTab />}
-        {section === 'protocol' && request.protocol === 'graphql' && <GraphQLTab />}
-        {section === 'protocol' && request.protocol === 'websocket' && <WebSocketTab />}
-        {section === 'protocol' && request.protocol === 'sse' && <SseTab />}
-        {section === 'protocol' && request.protocol === 'grpc' && <GrpcTab />}
-          </RequestTabPanel>
+          <SectionTabs section={section} onSectionChange={setSection} />
+          <ActiveSection section={section} onFormatError={onFormatError} />
         </Box>
 
         <ResizeHandle

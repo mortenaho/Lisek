@@ -13,9 +13,12 @@ import {
 } from '@mui/material'
 import ExpandLess from '@mui/icons-material/ExpandLess'
 import ExpandMore from '@mui/icons-material/ExpandMore'
-import { useCallback, useMemo, useState } from 'react'
+import { memo, useCallback, useMemo, useState } from 'react'
 import CodeEditor from '../../components/CodeEditor'
-import { useRequestEditor } from '../../contexts/RequestEditorContext'
+import {
+  useRequestEditorActions,
+  useRequestField
+} from '../../contexts/RequestEditorContext'
 
 type SchemaType = {
   kind: string
@@ -124,25 +127,56 @@ function GraphQLSchemaExplorer({
   )
 }
 
+const GraphQLQueryEditor = memo(function GraphQLQueryEditor() {
+  const { patch } = useRequestEditorActions()
+  const requestId = useRequestField('id')
+  const value = useRequestField('graphqlQuery')
+  const onChange = useCallback((next: string) => patch({ graphqlQuery: next }), [patch])
+
+  return (
+    <CodeEditor
+      editorKey={`${requestId}-gql-query`}
+      height="180px"
+      language="graphql"
+      value={value}
+      onChange={onChange}
+    />
+  )
+})
+
+const GraphQLVariablesEditor = memo(function GraphQLVariablesEditor() {
+  const { patch } = useRequestEditorActions()
+  const requestId = useRequestField('id')
+  const value = useRequestField('graphqlVariables')
+  const onChange = useCallback((next: string) => patch({ graphqlVariables: next }), [patch])
+
+  return (
+    <CodeEditor
+      editorKey={`${requestId}-gql-vars`}
+      height="100px"
+      language="json"
+      value={value}
+      onChange={onChange}
+    />
+  )
+})
+
 export default function GraphQLTab() {
-  const { request, patch, flush } = useRequestEditor()
+  const { patch, flush, getDraft } = useRequestEditorActions()
+  const url = useRequestField('url')
+  const headers = useRequestField('headers')
+  const graphqlOperationType = useRequestField('graphqlOperationType')
   const [schema, setSchema] = useState<IntrospectionData | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const patchQuery = useCallback((graphqlQuery: string) => patch({ graphqlQuery }), [patch])
-  const patchVariables = useCallback(
-    (graphqlVariables: string) => patch({ graphqlVariables }),
-    [patch]
-  )
-
   const introspect = async () => {
     flush()
-    if (!request.url) return
+    if (!url) return
     setLoading(true)
     setError(null)
     try {
-      const result = (await window.lisek.graphql.introspect(request.url, request.headers)) as IntrospectionData
+      const result = (await window.lisek.graphql.introspect(url, headers)) as IntrospectionData
       setSchema(result)
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
@@ -153,7 +187,7 @@ export default function GraphQLTab() {
   }
 
   const insertField = (field: string) => {
-    const current = request.graphqlQuery.trim()
+    const current = getDraft().graphqlQuery.trim()
     if (!current || current === '# Write your query here') {
       patch({ graphqlQuery: `{\n  ${field}\n}` })
       return
@@ -169,13 +203,13 @@ export default function GraphQLTab() {
         <ToggleButtonGroup
           size="small"
           exclusive
-          value={request.graphqlOperationType || 'query'}
+          value={graphqlOperationType || 'query'}
           onChange={(_, value) => value && patch({ graphqlOperationType: value })}
         >
           <ToggleButton value="query">Query</ToggleButton>
           <ToggleButton value="subscription">Subscription</ToggleButton>
         </ToggleButtonGroup>
-        <Button size="small" onClick={() => void introspect()} disabled={loading || !request.url}>
+        <Button size="small" onClick={() => void introspect()} disabled={loading || !url}>
           {loading ? <CircularProgress size={16} sx={{ mr: 1 }} /> : null}
           Introspect Schema
         </Button>
@@ -186,18 +220,8 @@ export default function GraphQLTab() {
         </Alert>
       )}
       {schema && <GraphQLSchemaExplorer schema={schema} onInsertField={insertField} />}
-      <CodeEditor
-        height="180px"
-        language="graphql"
-        value={request.graphqlQuery}
-        onChange={patchQuery}
-      />
-      <CodeEditor
-        height="100px"
-        language="json"
-        value={request.graphqlVariables}
-        onChange={patchVariables}
-      />
+      <GraphQLQueryEditor />
+      <GraphQLVariablesEditor />
     </Box>
   )
 }

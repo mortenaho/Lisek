@@ -336,27 +336,22 @@ function VariableInput({
           {text ? (
             segments.map((seg, i) =>
               seg.type === 'variable' ? (
-                <Box
+                <span
                   key={i}
-                  component="span"
-                  sx={{
+                  style={{
                     color: variableColor(seg.source, theme),
-                    bgcolor: `${variableColor(seg.source, theme)}22`,
-                    borderRadius: '2px',
-                    boxDecorationBreak: 'clone',
-                    WebkitBoxDecorationBreak: 'clone'
+                    backgroundColor: `${variableColor(seg.source, theme)}22`,
+                    borderRadius: 2
                   }}
                 >
                   {seg.content}
-                </Box>
+                </span>
               ) : (
                 <span key={i}>{seg.content}</span>
               )
             )
           ) : (
-            <Box component="span" sx={{ color: 'text.disabled' }}>
-              {placeholder}
-            </Box>
+            <span style={{ color: theme.palette.text.disabled }}>{placeholder}</span>
           )}
         </Box>
 

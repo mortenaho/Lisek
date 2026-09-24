@@ -13,7 +13,7 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import AttachFileIcon from '@mui/icons-material/AttachFile'
 import LockIcon from '@mui/icons-material/Lock'
 import LockOpenIcon from '@mui/icons-material/LockOpen'
-import { memo, useCallback, useMemo } from 'react'
+import { memo, useCallback, useMemo, useRef } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 import type { KeyValue } from '@shared/types'
 import { COMPACT } from '../theme/compact'
@@ -188,42 +188,45 @@ function KeyValueEditor({
       ? '28px 1fr 1fr 32px 32px'
       : '28px 1fr 1fr 32px'
 
-  const onFieldChange = useCallback(
-    (index: number, field: keyof KeyValue, value: string | boolean) => {
-      onChange(items.map((row, i) => (i === index ? { ...row, [field]: value } : row)))
-    },
-    [items, onChange]
-  )
+  // Keep latest items/onChange in refs so row callbacks stay stable and memoized
+  // KeyValueRow components don't all re-render on every keystroke.
+  const itemsRef = useRef(items)
+  itemsRef.current = items
+  const onChangeRef = useRef(onChange)
+  onChangeRef.current = onChange
 
-  const add = useCallback(
-    () => onChange([...items, { id: uuidv4(), key: '', value: '', enabled: true }]),
-    [items, onChange]
-  )
+  const onFieldChange = useCallback((index: number, field: keyof KeyValue, value: string | boolean) => {
+    onChangeRef.current(
+      itemsRef.current.map((row, i) => (i === index ? { ...row, [field]: value } : row))
+    )
+  }, [])
 
-  const remove = useCallback(
-    (index: number) => onChange(items.filter((_, i) => i !== index)),
-    [items, onChange]
-  )
+  const add = useCallback(() => {
+    onChangeRef.current([
+      ...itemsRef.current,
+      { id: uuidv4(), key: '', value: '', enabled: true }
+    ])
+  }, [])
 
-  const pickFile = useCallback(
-    async (index: number) => {
-      const filePath = await window.lisek.dialog.openFile([{ name: 'All Files', extensions: ['*'] }])
-      if (!filePath) return
-      onChange(
-        items.map((row, i) =>
-          i === index ? { ...row, filePath, value: filePath.split(/[/\\]/).pop() || '' } : row
-        )
+  const remove = useCallback((index: number) => {
+    onChangeRef.current(itemsRef.current.filter((_, i) => i !== index))
+  }, [])
+
+  const pickFile = useCallback(async (index: number) => {
+    const filePath = await window.lisek.dialog.openFile([{ name: 'All Files', extensions: ['*'] }])
+    if (!filePath) return
+    onChangeRef.current(
+      itemsRef.current.map((row, i) =>
+        i === index ? { ...row, filePath, value: filePath.split(/[/\\]/).pop() || '' } : row
       )
-    },
-    [items, onChange]
-  )
+    )
+  }, [])
 
-  const setAllEnabled = useCallback(
-    (enabled: boolean) => onChange(items.map((row) => ({ ...row, enabled }))),
-    [items, onChange]
-  )
+  const setAllEnabled = useCallback((enabled: boolean) => {
+    onChangeRef.current(itemsRef.current.map((row) => ({ ...row, enabled })))
+  }, [])
 
-  const clearAll = useCallback(() => onChange([]), [onChange])
+  const clearAll = useCallback(() => onChangeRef.current([]), [])
 
   return (
     <Box>

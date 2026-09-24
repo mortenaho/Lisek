@@ -11,7 +11,7 @@ import {
   Divider,
   Paper
 } from '@mui/material'
-import { useRequestEditor } from '../../contexts/RequestEditorContext'
+import { useRequestEditorActions, useRequestField } from '../../contexts/RequestEditorContext'
 import { COMPACT } from '../../theme/compact'
 import { applyControlledInputChange } from '../../utils/inputSelection'
 import type { AuthType, OAuthGrantType } from '@shared/types'
@@ -25,8 +25,9 @@ const AUTH_OPTIONS: { value: AuthType; label: string; hint: string }[] = [
 ]
 
 export default function AuthTab() {
-  const { request, patch } = useRequestEditor()
-  const { authType, auth } = request
+  const { patch } = useRequestEditorActions()
+  const authType = useRequestField('authType')
+  const auth = useRequestField('auth')
 
   const setAuth = (partial: Partial<typeof auth>) =>
     patch({ auth: { ...auth, ...partial } })
