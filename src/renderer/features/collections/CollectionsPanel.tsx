@@ -419,6 +419,16 @@ export default function CollectionsPanel() {
     await loadRequests()
   }
 
+  const copyAsCurl = async (req: RequestModel) => {
+    setMenuAnchor(null)
+    try {
+      const snippet = await window.lisek.export.curl(req.id)
+      await window.lisek.clipboard.writeText(snippet)
+    } catch {
+      await window.lisek.clipboard.writeText(`curl -X ${req.method} '${req.url}'`)
+    }
+  }
+
   const handleDelete = async () => {
     if (!deleteTarget) return
     if (deleteTarget.type === 'collection') {
@@ -906,6 +916,14 @@ export default function CollectionsPanel() {
               <ContentCopyIcon fontSize="small" />
             </ListItemIcon>
             Duplicate
+          </MenuItem>
+        )}
+        {menuAnchor?.target.type === 'request' && (
+          <MenuItem onClick={() => void copyAsCurl(menuAnchor.target.item as RequestModel)}>
+            <ListItemIcon>
+              <CodeIcon fontSize="small" />
+            </ListItemIcon>
+            Copy as cURL
           </MenuItem>
         )}
         <MenuItem

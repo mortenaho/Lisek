@@ -100,14 +100,17 @@ export default function AboutDialog({ open, onClose }: Props) {
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <LanguageIcon fontSize="small" color="action" />
+            <Typography variant="body2" color="text.secondary" component="span">
+              Website:{' '}
+            </Typography>
             <Link
               component="button"
               variant="body2"
               underline="hover"
-              onClick={() => info?.website && openLink(info.website)}
+              onClick={() => openLink(info?.website || 'https://mortenaho.ir')}
               sx={{ textAlign: 'left' }}
             >
-              {info?.website ?? '—'}
+              mortenaho.ir
             </Link>
           </Box>
         </Box>
