@@ -124,6 +124,28 @@ Postman-compatible **`pm.*`** sandbox: environment/collection vars, `pm.test`, `
 
 ---
 
+## Linux troubleshooting (Debian)
+
+If Lisek closes immediately with an error like `The SUID sandbox helper binary was found, but is not configured correctly`, repair the Chromium sandbox helper permissions for the Debian package installation:
+
+```bash
+sudo chown root:root /opt/Lisek/chrome-sandbox
+sudo chmod 4755 /opt/Lisek/chrome-sandbox
+lisek
+```
+
+The first two commands set the helper's owner to root and enable the permissions required by Chromium's sandbox. Then launch Lisek as your regular user. Do not run Lisek with `sudo` or use `--no-sandbox`.
+
+To verify the permissions, run:
+
+```bash
+stat -c '%U:%G %a' /opt/Lisek/chrome-sandbox
+```
+
+The expected output is `root:root 4755`.
+
+---
+
 ## Tech Stack
 
 | Layer | Technology |
