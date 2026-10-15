@@ -12,6 +12,7 @@ import type {
   TestResult
 } from '@shared/types'
 import { resolveCollectionVariables } from '@shared/collectionVariables'
+import { formatIpcError } from '../utils/formatIpcError'
 
 export interface RequestTab {
   tabId: string
@@ -520,7 +521,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         statusCode: 0,
         statusText: 'Error',
         headers: {},
-        body: e instanceof Error ? e.message : String(e),
+        body: formatIpcError(e),
         durationMs: 0,
         sizeBytes: 0,
         cookies: []
